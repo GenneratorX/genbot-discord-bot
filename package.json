@@ -1,0 +1,39 @@
+{
+  "name": "genbot-discord-bot",
+  "version": "1.0.0",
+  "description": "Discord bot with music playback functionality",
+  "main": "bot/bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GenneratorX/genbot-discord-bot.git"
+  },
+  "author": "GenneratorX",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/GenneratorX/genbot-discord-bot/issues"
+  },
+  "homepage": "https://github.com/GenneratorX/genbot-discord-bot#readme",
+  "dependencies": {
+    "@discordjs/opus": "^0.1.0",
+    "bufferutil": "^4.0.1",
+    "discord.js": "^12.0.2",
+    "erlpack": "github:discordapp/erlpack",
+    "install": "^0.13.0",
+    "libsodium-wrappers": "^0.7.6",
+    "npm": "^6.14.3",
+    "utf-8-validate": "^5.0.2"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^2.24.0",
+    "@typescript-eslint/parser": "^2.24.0",
+    "chokidar": "^3.3.1",
+    "eslint": "^6.8.0",
+    "eslint-plugin-import": "^2.20.1",
+    "eslint-plugin-node": "^11.0.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "typescript": "^3.8.3"
+  }
+}

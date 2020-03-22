@@ -1,0 +1,47 @@
+{
+  "env": {
+    "browser": false,
+    "es6": true,
+    "node": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/eslint-recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking"
+  ],
+  "globals": {
+    "Atomics": "readonly",
+    "SharedArrayBuffer": "readonly"
+  },
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "sourceType": "module",
+    "project": "./tsconfig.json"
+  },
+  "plugins": [
+    "import",
+    "node",
+    "promise",
+    "@typescript-eslint/eslint-plugin"
+  ],
+  "rules": {
+    "arrow-parens": ["error", "always"],
+    "comma-dangle": ["error", {
+      "arrays": "never",
+      "objects": "always-multiline",
+      "imports": "never",
+      "exports": "never",
+      "functions": "never"
+    }],
+    "keyword-spacing": ["error"],
+    "max-len": ["error", { "code": 120 }],
+    "semi": 0,
+    "space-before-function-paren": ["error", "never"],
+    "@typescript-eslint/no-use-before-define": 0,
+    "@typescript-eslint/semi": ["error"],
+    "@typescript-eslint/indent": ["error", 2],
+    "@typescript-eslint/quotes": ["error", "single", { "allowTemplateLiterals": true }]
+  }
+}
