@@ -63,6 +63,12 @@ client.on('message', (msg: Discord.Message) => {
                 .setTitle('Link-ul introdus este invalid!')
             );
           }
+        } else {
+          msg.channel.send(
+            new Discord.MessageEmbed()
+              .setColor('#FF0000')
+              .setTitle('Intră într-o cameră de voce că altfel o să ascult melodia singur!')
+          );
         }
       } else {
         msg.channel.send(
