@@ -3,7 +3,22 @@ import ytdl = require('ytdl-core-discord');
 const client = new Discord.Client();
 const { prefix, token } = require('./config.json');
 
+let currentVoiceChannel: Discord.VoiceChannel;
+let connection: Discord.VoiceConnection;
+let dispatcher: Discord.StreamDispatcher;
 let isPlaying = false;
+let songQueue: string[] = [];
+const ytdlConfig = {
+  quality: 'highestaudio',
+  highWaterMark: 1 << 25,
+};
+const dispatcherConfig: { bitrate: 'auto'; fec: boolean; highWaterMark: number; type: 'opus'; volume: boolean } = {
+  bitrate: 'auto',
+  fec: true,
+  highWaterMark: 1,
+  type: 'opus',
+  volume: false,
+};
 
 client.on('ready', () => {
   if (client.user !== null) {
@@ -37,7 +52,8 @@ client.on('message', (msg: Discord.Message) => {
     if (param.length > 0) {
       if (msg.member.voice.channel !== null) {
         if (ytdl.validateURL(param) === true) {
-          playback(msg.member.voice.channel, param);
+          currentVoiceChannel = msg.member.voice.channel;
+          queueControl('add', param);
           ytdl.getBasicInfo(param)
             .then((info) => {
               const minutes = Math.floor(info.player_response.videoDetails.lengthSeconds / 60);
@@ -88,34 +104,90 @@ client.on('message', (msg: Discord.Message) => {
     }
     return;
   }
+
+  if (command === 'start' || command === 'stop' || command === 's') {
+    if (isPlaying === true) {
+      if (command === 'stop' || command === 's') {
+        dispatcher.pause(true);
+        isPlaying = false;
+        msg.channel.send(
+          new Discord.MessageEmbed()
+            .setColor('#FFFF00')
+            .setTitle('Opresc melodia imediat!')
+        );
+      }
+    } else {
+      if (songQueue.length !== 0) {
+        if (command === 'start' || command === 's') {
+          dispatcher.resume();
+          isPlaying = true;
+          msg.channel.send(
+            new Discord.MessageEmbed()
+              .setColor('#FFFF00')
+              .setTitle('Continuăm de unde am rămas!')
+          );
+        }
+      }
+    }
+    return;
+  }
 });
 
 /**
- * Start playing song in specific channel
- * @param voiceChannel Voice channel to join
+ * Starts playing a song in the current voice channel
  * @param ytLink YouTube video link
  */
-async function playback(voiceChannel: Discord.VoiceChannel, ytLink: string): Promise<void> {
-  const connection = await voiceChannel.join();
-  const dispatcher = connection.play(
-    await ytdl(ytLink, { filter: 'audioonly', quality: 'highestaudio', highWaterMark: 1 << 25 }),
-    {
-      bitrate: 'auto',
-      highWaterMark: 1,
-      type: 'opus',
-      volume: false,
-    });
+async function musicControl(ytLink: string): Promise<void> {
+  connection = await currentVoiceChannel.join();
+  dispatcher = connection.play(await ytdl(ytLink, ytdlConfig), dispatcherConfig);
 
   dispatcher.on('start', () => {
-    console.log('Song started');
+    console.log(`Song started ${ytLink}`);
+    isPlaying = true;
   });
 
   dispatcher.on('finish', () => {
-    console.log('Song ended');
-    connection.disconnect();
+    console.log(`Song ended ${ytLink}`);
+
+    isPlaying = false;
+    queueControl('remove');
+
+    if (songQueue.length === 0) {
+      connection.disconnect();
+    }
   });
 
   dispatcher.on('error', console.error);
+
+  connection.on('closing', () => {
+    console.log(`Am ieșit!`);
+    songQueue.length = 0;
+    isPlaying = false;
+  });
+
+}
+
+/**
+ * Adds/Removes songs from the song queue
+ * @param action Add/Remove YouTube link from song queue
+ * @param ytLink The YouTube link to add
+ */
+function queueControl(action: 'add' | 'remove', ytLink?: string): void {
+  if (action === 'add' && ytLink !== undefined) {
+    if (songQueue.length > 0) {
+      songQueue.push(ytLink);
+    } else {
+      songQueue = [ytLink];
+      musicControl(ytLink);
+    }
+  } else {
+    if (songQueue.length > 0) {
+      songQueue.shift();
+      if (songQueue.length > 0) {
+        musicControl(songQueue[0]);
+      }
+    }
+  }
 }
 
 client.login(token);
