@@ -45,9 +45,12 @@ client.on('message', (msg: Discord.Message) => {
                     .setAuthor('--------------- ÎN CURS DE REDARE ---------------')
                     .setTitle(info.player_response.videoDetails.title)
                     .addFields(
-                      { name: 'Adăugat de', value: msg.member.user.tag, inline: true },
+                      { name: 'Adăugat de', value: `<@${msg.author.id}>`, inline: true },
                       { name: 'Durata', value: `${minutes}:${seconds}`, inline: true },
-                      { name: 'Canal', value: info.author.name, inline: true }
+                      {
+                        name: 'Link YouTube',
+                        value: `https://www.youtube.com/watch?v=${info.player_response.videoDetails.videoId}`,
+                      }
                     )
                 );
               })
