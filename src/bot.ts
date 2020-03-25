@@ -1,24 +1,13 @@
 import Discord = require('discord.js');
 import ytdl = require('ytdl-core-discord');
+import env = require('./env');
 const client = new Discord.Client();
-const { prefix, token } = require('./config.json');
 
 let currentVoiceChannel: Discord.VoiceChannel;
 let connection: Discord.VoiceConnection;
 let dispatcher: Discord.StreamDispatcher;
 let isPlaying = false;
 let songQueue: string[] = [];
-const ytdlConfig = {
-  quality: 'highestaudio',
-  highWaterMark: 1 << 25,
-};
-const dispatcherConfig: { bitrate: 'auto'; fec: boolean; highWaterMark: number; type: 'opus'; volume: boolean } = {
-  bitrate: 'auto',
-  fec: true,
-  highWaterMark: 1,
-  type: 'opus',
-  volume: false,
-};
 
 client.on('ready', () => {
   if (client.user !== null) {
@@ -31,7 +20,7 @@ client.on('ready', () => {
 client.on('message', (msg: Discord.Message) => {
   if ((msg.channel.id !== '363672801451966464' && msg.channel.id !== '363106595132932098') ||
     msg.author.bot === true ||
-    msg.content.startsWith(prefix) === false) return;
+    msg.content.startsWith(env.BOT_PREFIX) === false) return;
 
   const split = msg.content.split(' ');
   const command = split.shift().substring(1);
@@ -93,13 +82,13 @@ client.on('message', (msg: Discord.Message) => {
       msg.channel.send(
         new Discord.MessageEmbed()
           .setColor('#00FF00')
-          .setTitle(`${prefix}play <link YouTube>`)
+          .setTitle(`${env.BOT_PREFIX}play <link YouTube>`)
           .setDescription(
             `Redă sunetul din videoclipul introdus în camera curentă.\nVarianta scurtă a comenzii: ` +
-            `**${prefix}p <link YouTube>**`)
+            `**${env.BOT_PREFIX}p <link YouTube>**`)
           .addField('Exemple',
-            `${prefix}play <https://www.youtube.com/watch?v=dQw4w9WgXcQ>\n` +
-            `${prefix}p <https://youtube.com/watch?v=r_0JjYUe5jo>`)
+            `${env.BOT_PREFIX}play <https://www.youtube.com/watch?v=dQw4w9WgXcQ>\n` +
+            `${env.BOT_PREFIX}p <https://youtube.com/watch?v=r_0JjYUe5jo>`)
       );
     }
     return;
@@ -139,7 +128,7 @@ client.on('message', (msg: Discord.Message) => {
  */
 async function musicControl(ytLink: string): Promise<void> {
   connection = await currentVoiceChannel.join();
-  dispatcher = connection.play(await ytdl(ytLink, ytdlConfig), dispatcherConfig);
+  dispatcher = connection.play(await ytdl(ytLink, env.YTDL_CONFIG), env.DISPATCHER_CONFIG);
 
   dispatcher.on('start', () => {
     console.log(`Song started ${ytLink}`);
@@ -190,4 +179,4 @@ function queueControl(action: 'add' | 'remove', ytLink?: string): void {
   }
 }
 
-client.login(token);
+client.login(env.BOT_TOKEN);
