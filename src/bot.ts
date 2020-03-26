@@ -9,7 +9,7 @@ let currentVoiceChannel: Discord.VoiceChannel;
 let connection: Discord.VoiceConnection;
 let dispatcher: Discord.StreamDispatcher;
 let isPlaying = false;
-let songQueue: string[] = [];
+let songQueue: { videoID: string; videoTitle: string; videoDuration: string; addedBy: string }[];
 
 client.on('ready', () => {
   if (client.user !== null) {
@@ -25,45 +25,45 @@ client.on('message', (msg: Discord.Message) => {
     msg.content.startsWith(env.BOT_PREFIX) === false) return;
 
   const split = msg.content.split(' ');
-  const command = split.shift().substring(1);
+  const command = (split.shift() as string).substring(1);
   const param = split.join(' ');
 
   console.log(`[COMMAND] ${command} [PARAM] ${param}`);
 
   if (command === 'play' || command === 'p') {
     if (param.length > 0) {
-      if (msg.member.voice.channel !== null) {
-        if (ytdl.validateURL(param) === true) {
-          currentVoiceChannel = msg.member.voice.channel;
-          queueControl('add', param);
-          ytdl.getBasicInfo(param)
-            .then((info) => {
-              const minutes = Math.floor(info.player_response.videoDetails.lengthSeconds / 60);
-              const seconds = info.player_response.videoDetails.lengthSeconds % 60;
-
-              msg.channel.send(
-                new Discord.MessageEmbed()
-                  .setColor('#00FF00')
-                  .setAuthor('--------------- ÎN CURS DE REDARE ---------------')
-                  .setTitle(info.player_response.videoDetails.title)
-                  .addFields(
-                    { name: 'Adăugat de', value: `<@${msg.author.id}>`, inline: true },
-                    { name: 'Durata', value: `${minutes}:${seconds}`, inline: true },
-                    {
-                      name: 'Link YouTube',
-                      value: `https://www.youtube.com/watch?v=${info.player_response.videoDetails.videoId}`,
-                    }
-                  )
-              );
-            })
-            .catch(console.log);
-        } else {
-          msg.channel.send(
-            new Discord.MessageEmbed()
-              .setColor('#FF0000')
-              .setTitle('Link-ul introdus este invalid!')
-          );
-        }
+      if (msg.member !== null && msg.member.voice.channel !== null) {
+        getSongInfo(param)
+          .then((info) => {
+            currentVoiceChannel = (msg.member as Discord.GuildMember).voice.channel as Discord.VoiceChannel;
+            queueControl('add', {
+              videoID: info.videoID,
+              videoTitle: info.videoTitle,
+              videoDuration: info.videoDuration,
+              addedBy: msg.author.id,
+            });
+            msg.channel.send(
+              new Discord.MessageEmbed()
+                .setColor('#00FF00')
+                .setAuthor('Adăugare melodie')
+                .setTitle(info.videoTitle)
+                .addFields(
+                  { name: 'Adăugat de', value: `<@${msg.author.id}>`, inline: true },
+                  { name: 'Durata', value: info.videoDuration, inline: true },
+                  {
+                    name: 'Link YouTube',
+                    value: `https://www.youtube.com/watch?v=${info.videoID}`,
+                  }
+                )
+            );
+          })
+          .catch(() => {
+            msg.channel.send(
+              new Discord.MessageEmbed()
+                .setColor('#FF0000')
+                .setTitle('Link-ul introdus este invalid!')
+            );
+          });
       } else {
         msg.channel.send(
           new Discord.MessageEmbed()
@@ -99,7 +99,7 @@ client.on('message', (msg: Discord.Message) => {
         );
       }
     } else {
-      if (songQueue.length !== 0) {
+      if (songQueue !== undefined && songQueue.length !== 0) {
         if (command === 'start' || command === 's') {
           dispatcher.resume();
           isPlaying = true;
@@ -115,14 +115,17 @@ client.on('message', (msg: Discord.Message) => {
   }
 
   if (command === 'queue' || command === 'q') {
-    if (songQueue.length > 0) {
-      let musicList = '';
-      for (let i = 0; i < songQueue.length; i++) {
-        musicList += `**${i + 1}.** ${songQueue[i]}\n`;
+    if (songQueue !== undefined && songQueue.length > 0) {
+      let musicList = `**Melodia curentă**\n` +
+        `${songQueue[0].videoTitle} **[${songQueue[0].videoDuration}]** \`Adăugat de\` <@${songQueue[0].addedBy}>\n` +
+        `-----------------------------------------------------------------------------------------------\n`;
+      for (let i = 1; i < songQueue.length; i++) {
+        musicList += `\`${i}.\` ${songQueue[i].videoTitle} **[${songQueue[i].videoDuration}]** ` +
+          `\`Adăugat de\` <@${songQueue[i].addedBy}>\n\n`;
       }
       msg.channel.send(new Discord.MessageEmbed()
         .setColor('#00FF00')
-        .setTitle('Lista de redare')
+        .setTitle('Listă de redare')
         .setDescription(musicList)
       );
     } else {
@@ -161,23 +164,23 @@ client.on('message', (msg: Discord.Message) => {
         .setTitle('Pagină comenzi bot')
         .addFields(
           {
-            name: `\`\`\`1.\`\`\` **${env.BOT_PREFIX}play / ${env.BOT_PREFIX}p <link YouTube>**`,
+            name: `\`1.\` **${env.BOT_PREFIX}play / ${env.BOT_PREFIX}p <link YouTube>**`,
             value: 'Redă sunetul din videoclipul introdus',
           },
           {
-            name: `\`\`\`2.\`\`\` **${env.BOT_PREFIX}stop / ${env.BOT_PREFIX}s**`,
+            name: `\`2.\` **${env.BOT_PREFIX}stop / ${env.BOT_PREFIX}s**`,
             value: 'Oprește redarea videoclipului curent',
           },
           {
-            name: `\`\`\`3.\`\`\` **${env.BOT_PREFIX}start / ${env.BOT_PREFIX}s**`,
+            name: `\`3.\` **${env.BOT_PREFIX}start / ${env.BOT_PREFIX}s**`,
             value: 'Repornește redarea videclipului curent',
           },
           {
-            name: `\`\`\`4.\`\`\` **${env.BOT_PREFIX}queue / ${env.BOT_PREFIX}q**`,
+            name: `\`4.\` **${env.BOT_PREFIX}queue / ${env.BOT_PREFIX}q**`,
             value: 'Afișează lista de redare',
           },
           {
-            name: `\`\`\`0.\`\`\` **${env.BOT_PREFIX}about / ${env.BOT_PREFIX}despre**`,
+            name: `\`0.\` **${env.BOT_PREFIX}about / ${env.BOT_PREFIX}despre**`,
             value: 'Afișează informații despre bot',
           }
         )
@@ -195,7 +198,7 @@ client.on('message', (msg: Discord.Message) => {
 
 /**
  * Starts playing a song in the current voice channel
- * @param ytLink YouTube video link
+ * @param ytLink YouTube [video link | video ID]
  */
 async function musicControl(ytLink: string): Promise<void> {
   connection = await currentVoiceChannel.join();
@@ -230,24 +233,53 @@ async function musicControl(ytLink: string): Promise<void> {
 /**
  * Adds/Removes songs from the song queue
  * @param action Add/Remove YouTube link from song queue
- * @param ytLink The YouTube link to add
+ * @param videoInfo Video information object
  */
-function queueControl(action: 'add' | 'remove', ytLink?: string): void {
-  if (action === 'add' && ytLink !== undefined) {
-    if (songQueue.length > 0) {
-      songQueue.push(ytLink);
+function queueControl(action: 'add' | 'remove',
+  videoInfo?: { videoID: string; videoTitle: string; videoDuration: string; addedBy: string }): void {
+  if (action === 'add' && videoInfo !== undefined) {
+    if (songQueue !== undefined && songQueue.length > 0) {
+      songQueue.push(videoInfo);
     } else {
-      songQueue = [ytLink];
-      musicControl(ytLink);
+      songQueue = [videoInfo];
+      musicControl(videoInfo.videoID);
     }
   } else {
     if (songQueue.length > 0) {
       songQueue.shift();
       if (songQueue.length > 0) {
-        musicControl(songQueue[0]);
+        musicControl(songQueue[0].videoID);
       }
     }
   }
+}
+
+/**
+ * Gets the song info of a YouTube video
+ * @param ytLink YouTube video URL to get the song info from
+ * @return Song info
+ */
+async function getSongInfo(ytLink: string): Promise<{ videoID: string; videoTitle: string; videoDuration: string }> {
+  if (ytdl.validateURL(ytLink) === true) {
+    const songInfo = await ytdl.getBasicInfo(ytLink);
+
+    let minutes = Math.floor(songInfo.player_response.videoDetails.lengthSeconds / 60).toString();
+    let seconds = (songInfo.player_response.videoDetails.lengthSeconds % 60).toString();
+
+    if (minutes.length === 1) {
+      minutes = '0' + minutes;
+    }
+    if (seconds.length === 1) {
+      seconds = '0' + seconds;
+    }
+
+    return {
+      videoID: songInfo.player_response.videoDetails.videoId,
+      videoTitle: songInfo.player_response.videoDetails.title,
+      videoDuration: `${minutes}:${seconds}`,
+    };
+  }
+  throw new Error('invalidYTLink');
 }
 
 client.login(env.BOT_TOKEN);
