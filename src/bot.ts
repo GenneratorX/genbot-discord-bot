@@ -123,13 +123,14 @@ client.on('message', (msg: Discord.Message) => {
         .addFields(
           { name: 'Dezvoltator', value: '<@242758294525968388>', inline: true },
           { name: 'Licență', value: 'GPLv3', inline: true },
-          { name: 'Versiune', value: 'v1585235363', inline: true },
+          { name: 'Versiune', value: 'v1585236550', inline: true },
           {
             name: '**Codul sursă este disponibil la adresa**',
             value: 'https://github.com/GenneratorX/genbot-discord-bot',
           }
         )
     );
+    return;
   }
 
   if (command === 'help' || command === 'h') {
@@ -139,25 +140,32 @@ client.on('message', (msg: Discord.Message) => {
         .setTitle('Pagină comenzi bot')
         .addFields(
           {
-            name: '```1.``` **-play / -p <link YouTube>**',
+            name: `\`\`\`1.\`\`\` **${env.BOT_PREFIX}play / ${env.BOT_PREFIX}p <link YouTube>**`,
             value: 'Redă sunetul din videoclipul introdus',
           },
           {
-            name: '```2.``` **-stop / -s**',
+            name: `\`\`\`2.\`\`\` **${env.BOT_PREFIX}stop / ${env.BOT_PREFIX}s**`,
             value: 'Oprește redarea videoclipului curent',
           },
           {
-            name: '```3.``` **-start / -s**',
+            name: `\`\`\`3.\`\`\` **${env.BOT_PREFIX}start / ${env.BOT_PREFIX}s**`,
             value: 'Repornește redarea videclipului curent',
           },
           {
-            name: '```0.``` **-about / -despre**',
+            name: `\`\`\`0.\`\`\` **${env.BOT_PREFIX}about / ${env.BOT_PREFIX}despre**`,
             value: 'Afișează informații despre bot',
           }
         )
     );
     return;
   }
+
+  msg.channel.send(
+    new Discord.MessageEmbed()
+      .setColor('#FF0000')
+      .setDescription(`Nu am auzit de comanda aia. Scrie **${env.BOT_PREFIX}help** pentru a vizualiza lista de comenzi`)
+  );
+
 });
 
 /**
