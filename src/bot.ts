@@ -15,7 +15,7 @@ client.on('ready', () => {
   if (client.user !== null) {
     console.log(`Logged in as ${client.user.tag}!`);
     client.user.setStatus('online');
-    client.user.setActivity('sunt un papagal!');
+    client.user.setActivity('your requests', { type: 'LISTENING' });
   }
 });
 
@@ -114,6 +114,27 @@ client.on('message', (msg: Discord.Message) => {
     return;
   }
 
+  if (command === 'queue' || command === 'q') {
+    if (songQueue.length > 0) {
+      let musicList = '';
+      for (let i = 0; i < songQueue.length; i++) {
+        musicList += `**${i + 1}.** ${songQueue[i]}\n`;
+      }
+      msg.channel.send(new Discord.MessageEmbed()
+        .setColor('#00FF00')
+        .setTitle('Lista de redare')
+        .setDescription(musicList)
+      );
+    } else {
+      msg.channel.send(
+        new Discord.MessageEmbed()
+          .setColor('#FFFF00')
+          .setTitle('Lista de redare este goală!')
+      );
+    }
+    return;
+  }
+
   if (command === 'about' || command === 'despre') {
     msg.channel.send(
       new Discord.MessageEmbed()
@@ -150,6 +171,10 @@ client.on('message', (msg: Discord.Message) => {
           {
             name: `\`\`\`3.\`\`\` **${env.BOT_PREFIX}start / ${env.BOT_PREFIX}s**`,
             value: 'Repornește redarea videclipului curent',
+          },
+          {
+            name: `\`\`\`4.\`\`\` **${env.BOT_PREFIX}queue / ${env.BOT_PREFIX}q**`,
+            value: 'Afișează lista de redare',
           },
           {
             name: `\`\`\`0.\`\`\` **${env.BOT_PREFIX}about / ${env.BOT_PREFIX}despre**`,
@@ -194,7 +219,7 @@ async function musicControl(ytLink: string): Promise<void> {
 
   dispatcher.on('error', console.error);
 
-  connection.on('closing', () => {
+  connection.on('disconnect', () => {
     console.log(`Am ieșit!`);
     songQueue.length = 0;
     isPlaying = false;
