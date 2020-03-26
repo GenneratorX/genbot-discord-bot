@@ -123,7 +123,7 @@ client.on('message', (msg: Discord.Message) => {
         .addFields(
           { name: 'Dezvoltator', value: '<@242758294525968388>', inline: true },
           { name: 'Licență', value: 'GPLv3', inline: true },
-          { name: 'Versiune', value: 'v1585236550', inline: true },
+          { name: 'Versiune', value: env.BOT_VERSION, inline: true },
           {
             name: '**Codul sursă este disponibil la adresa**',
             value: 'https://github.com/GenneratorX/genbot-discord-bot',
