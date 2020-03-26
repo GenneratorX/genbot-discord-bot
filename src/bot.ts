@@ -120,6 +120,51 @@ client.on('message', (msg: Discord.Message) => {
     }
     return;
   }
+
+  if (command === 'about' || command === 'despre') {
+    msg.channel.send(
+      new Discord.MessageEmbed()
+        .setColor('#0000FF')
+        .setTitle('Despre')
+        .setDescription('Bot de muzică destinat __exclusiv__ comunității **BOOSTED SHITZ**!')
+        .addFields(
+          { name: 'Dezvoltator', value: '<@242758294525968388>', inline: true },
+          { name: 'Licență', value: 'GPLv3', inline: true },
+          { name: 'Versiune', value: 'v1585235363', inline: true },
+          {
+            name: '**Codul sursă este disponibil la adresa**',
+            value: 'https://github.com/GenneratorX/genbot-discord-bot',
+          }
+        )
+    );
+  }
+
+  if (command === 'help' || command === 'h') {
+    msg.channel.send(
+      new Discord.MessageEmbed()
+        .setColor('#0000FF')
+        .setTitle('Pagină comenzi bot')
+        .addFields(
+          {
+            name: '```1.``` **-play / -p <link YouTube>**',
+            value: 'Redă sunetul din videoclipul introdus',
+          },
+          {
+            name: '```2.``` **-stop / -s**',
+            value: 'Oprește redarea videoclipului curent',
+          },
+          {
+            name: '```3.``` **-start / -s**',
+            value: 'Repornește redarea videclipului curent',
+          },
+          {
+            name: '```0.``` **-about / -despre**',
+            value: 'Afișează informații despre bot',
+          }
+        )
+    );
+    return;
+  }
 });
 
 /**
