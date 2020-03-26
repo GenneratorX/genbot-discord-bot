@@ -1,3 +1,5 @@
+'use strict';
+
 import Discord = require('discord.js');
 import ytdl = require('ytdl-core-discord');
 import env = require('./env');
@@ -27,15 +29,6 @@ client.on('message', (msg: Discord.Message) => {
   const param = split.join(' ');
 
   console.log(`[COMMAND] ${command} [PARAM] ${param}`);
-
-  if (command === 'repeta') {
-    if (param.length > 0) {
-      msg.channel.send(`**Matale ai spus:** ${param}`);
-    } else {
-      msg.channel.send(`Păi dă-mi un mesaj să îl repet, băi! <:cmonBruh:646737462256992296>`);
-    }
-    return;
-  }
 
   if (command === 'play' || command === 'p') {
     if (param.length > 0) {
