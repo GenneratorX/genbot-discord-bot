@@ -243,33 +243,37 @@ function commandHelp(msg: Discord.Message): void {
  * @param ytLink YouTube [video link | video ID]
  */
 async function musicControl(ytLink: string): Promise<void> {
-  connection = await currentVoiceChannel.join();
-  dispatcher = connection.play(await ytdl(ytLink, env.YTDL_CONFIG), env.DISPATCHER_CONFIG);
+  try {
+    connection = await currentVoiceChannel.join();
+    dispatcher = connection.play(await ytdl(ytLink, env.YTDL_CONFIG), env.DISPATCHER_CONFIG);
 
-  dispatcher.on('start', () => {
-    console.log(`Song started ${ytLink}`);
-    isPlaying = true;
-  });
+    dispatcher.on('start', () => {
+      console.log(`Song started ${ytLink}`);
+      isPlaying = true;
+    });
 
-  dispatcher.on('finish', () => {
-    console.log(`Song ended ${ytLink}`);
+    dispatcher.on('finish', () => {
+      console.log(`Song ended ${ytLink}`);
 
-    isPlaying = false;
-    queueControl('remove');
+      isPlaying = false;
+      queueControl('remove');
 
-    if (songQueue.length === 0) {
-      connection.disconnect();
-    }
-  });
+      if (songQueue.length === 0) {
+        connection.disconnect();
+      }
+    });
 
-  dispatcher.on('error', console.error);
+    connection.on('error', console.log);
+    dispatcher.on('error', console.log);
 
-  connection.on('disconnect', () => {
-    console.log(`Am ieșit!`);
-    songQueue.length = 0;
-    isPlaying = false;
-  });
-
+    connection.on('disconnect', () => {
+      console.log(`Am ieșit!`);
+      songQueue.length = 0;
+      isPlaying = false;
+    });
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 /**
