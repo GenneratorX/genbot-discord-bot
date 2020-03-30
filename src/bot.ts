@@ -32,8 +32,10 @@ client.on('message', (msg: Discord.Message) => {
 
   switch (command) {
     case 'play': commandPlayPause(msg, param, command); break;
-    case 'p': commandPlayPause(msg, param, command); break;
     case 'pause': commandPlayPause(msg, param, command); break;
+    case 'p': commandPlayPause(msg, param, command); break;
+    case 'skip': commandSkip(msg); break;
+    case 's': commandSkip(msg); break;
     case 'queue': commandQueue(msg); break;
     case 'q': commandQueue(msg); break;
     case 'about': commandAbout(msg); break;
@@ -52,7 +54,7 @@ client.on('message', (msg: Discord.Message) => {
 });
 
 /**
- * Prepares the song to be played by the bot
+ * Prepares the song to be played/paused by the bot
  * @param msg Discord message object
  * @param param Message command parameter
  * @param command Message command
@@ -137,6 +139,23 @@ function commandPlayPause(msg: Discord.Message, param: string, command: string):
 }
 
 /**
+ * Skips the current song if there is any
+ * @param msg Discord message object
+ */
+function commandSkip(msg: Discord.Message): void {
+  if (songQueue.length > 0) {
+    queueControl('remove');
+    if (songQueue.length > 0) {
+      msg.channel.send(
+        new Discord.MessageEmbed()
+          .setColor('#FFFF00')
+          .setTitle('Trecem la următoarea melodie...')
+      );
+    }
+  }
+}
+
+/**
  * Displays the song queue
  * @param msg Message command parameter
  */
@@ -204,7 +223,11 @@ function commandHelp(msg: Discord.Message): void {
           value: 'Oprește redarea videoclipului curent',
         },
         {
-          name: `\`3.\` **${env.BOT_PREFIX}queue / ${env.BOT_PREFIX}q**`,
+          name: `\`3.\` **${env.BOT_PREFIX}skip / ${env.BOT_PREFIX}s**`,
+          value: 'Trece la melodia următoare dacă există',
+        },
+        {
+          name: `\`4.\` **${env.BOT_PREFIX}queue / ${env.BOT_PREFIX}q**`,
           value: 'Afișează lista de redare',
         },
         {
@@ -268,6 +291,8 @@ function queueControl(action: 'add' | 'remove',
       songQueue.shift();
       if (songQueue.length > 0) {
         musicControl(songQueue[0].videoID);
+      } else {
+        connection.disconnect();
       }
     }
   }
