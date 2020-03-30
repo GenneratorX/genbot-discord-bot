@@ -30,171 +30,203 @@ client.on('message', (msg: Discord.Message) => {
 
   console.log(`[COMMAND] ${command} [PARAM] ${param}`);
 
-  if (command === 'play' || command === 'p') {
-    if (param.length > 0) {
-      if (msg.member !== null && msg.member.voice.channel !== null) {
-        getSongInfo(param)
-          .then((info) => {
-            currentVoiceChannel = (msg.member as Discord.GuildMember).voice.channel as Discord.VoiceChannel;
-            queueControl('add', {
-              videoID: info.videoID,
-              videoTitle: info.videoTitle,
-              videoDuration: info.videoDuration,
-              addedBy: msg.author.id,
-            });
-            msg.channel.send(
-              new Discord.MessageEmbed()
-                .setColor('#00FF00')
-                .setAuthor('Adăugare melodie')
-                .setTitle(info.videoTitle)
-                .addFields(
-                  { name: 'Adăugat de', value: `<@${msg.author.id}>`, inline: true },
-                  { name: 'Durata', value: info.videoDuration, inline: true },
-                  {
-                    name: 'Link YouTube',
-                    value: `https://www.youtube.com/watch?v=${info.videoID}`,
-                  }
-                )
-            );
-          })
-          .catch(() => {
-            msg.channel.send(
-              new Discord.MessageEmbed()
-                .setColor('#FF0000')
-                .setTitle('Link-ul introdus este invalid!')
-            );
+  switch (command) {
+    case 'play': commandPlay(msg, param); break;
+    case 'p': commandPlay(msg, param); break;
+    case 'start': commandStartStop(msg, command); break;
+    case 'stop': commandStartStop(msg, command); break;
+    case 's': commandStartStop(msg, command); break;
+    case 'queue': commandQueue(msg); break;
+    case 'q': commandQueue(msg); break;
+    case 'about': commandAbout(msg); break;
+    case 'despre': commandAbout(msg); break;
+    case 'help': commandHelp(msg); break;
+    case 'h': commandHelp(msg); break;
+    default:
+      msg.channel.send(
+        new Discord.MessageEmbed()
+          .setColor('#FF0000')
+          .setDescription(`Nu am auzit de comanda aia. ` +
+            `Scrie **${env.BOT_PREFIX}help** pentru a vizualiza lista de comenzi`)
+      );
+      break;
+  }
+});
+
+/**
+ * Prepares the song to be played by the bot
+ * @param msg Discord message object
+ * @param param Message command parameter
+ */
+function commandPlay(msg: Discord.Message, param: string): void {
+  if (param.length > 0) {
+    if (msg.member !== null && msg.member.voice.channel !== null) {
+      getSongInfo(param)
+        .then((info) => {
+          currentVoiceChannel = (msg.member as Discord.GuildMember).voice.channel as Discord.VoiceChannel;
+          queueControl('add', {
+            videoID: info.videoID,
+            videoTitle: info.videoTitle,
+            videoDuration: info.videoDuration,
+            addedBy: msg.author.id,
           });
-      } else {
-        msg.channel.send(
-          new Discord.MessageEmbed()
-            .setColor('#FF0000')
-            .setTitle('Intră într-o cameră de voce că altfel o să ascult melodia singur!')
-        );
-      }
+          msg.channel.send(
+            new Discord.MessageEmbed()
+              .setColor('#00FF00')
+              .setAuthor('Adăugare melodie')
+              .setTitle(info.videoTitle)
+              .addFields(
+                { name: 'Adăugat de', value: `<@${msg.author.id}>`, inline: true },
+                { name: 'Durata', value: info.videoDuration, inline: true },
+                {
+                  name: 'Link YouTube',
+                  value: `https://www.youtube.com/watch?v=${info.videoID}`,
+                }
+              )
+          );
+        })
+        .catch(() => {
+          msg.channel.send(
+            new Discord.MessageEmbed()
+              .setColor('#FF0000')
+              .setTitle('Link-ul introdus este invalid!')
+          );
+        });
     } else {
       msg.channel.send(
         new Discord.MessageEmbed()
-          .setColor('#00FF00')
-          .setTitle(`${env.BOT_PREFIX}play <link YouTube>`)
-          .setDescription(
-            `Redă sunetul din videoclipul introdus în camera curentă.\nVarianta scurtă a comenzii: ` +
-            `**${env.BOT_PREFIX}p <link YouTube>**`)
-          .addField('Exemple',
-            `${env.BOT_PREFIX}play <https://www.youtube.com/watch?v=dQw4w9WgXcQ>\n` +
-            `${env.BOT_PREFIX}p <https://youtube.com/watch?v=r_0JjYUe5jo>`)
+          .setColor('#FF0000')
+          .setTitle('Intră într-o cameră de voce că altfel o să ascult melodia singur!')
       );
     }
-    return;
-  }
-
-  if (command === 'start' || command === 'stop' || command === 's') {
-    if (isPlaying === true) {
-      if (command === 'stop' || command === 's') {
-        dispatcher.pause(true);
-        isPlaying = false;
-        msg.channel.send(
-          new Discord.MessageEmbed()
-            .setColor('#FFFF00')
-            .setTitle('Opresc melodia imediat!')
-        );
-      }
-    } else {
-      if (songQueue !== undefined && songQueue.length !== 0) {
-        if (command === 'start' || command === 's') {
-          dispatcher.resume();
-          isPlaying = true;
-          msg.channel.send(
-            new Discord.MessageEmbed()
-              .setColor('#FFFF00')
-              .setTitle('Continuăm de unde am rămas!')
-          );
-        }
-      }
-    }
-    return;
-  }
-
-  if (command === 'queue' || command === 'q') {
-    if (songQueue !== undefined && songQueue.length > 0) {
-      let musicList = `**Melodia curentă**\n` +
-        `${songQueue[0].videoTitle} **[${songQueue[0].videoDuration}]** \`Adăugat de\` <@${songQueue[0].addedBy}>\n` +
-        `-----------------------------------------------------------------------------------------------\n`;
-      for (let i = 1; i < songQueue.length; i++) {
-        musicList += `\`${i}.\` ${songQueue[i].videoTitle} **[${songQueue[i].videoDuration}]** ` +
-          `\`Adăugat de\` <@${songQueue[i].addedBy}>\n\n`;
-      }
-      msg.channel.send(new Discord.MessageEmbed()
+  } else {
+    msg.channel.send(
+      new Discord.MessageEmbed()
         .setColor('#00FF00')
-        .setTitle('Listă de redare')
-        .setDescription(musicList)
-      );
-    } else {
+        .setTitle(`${env.BOT_PREFIX}play <link YouTube>`)
+        .setDescription(
+          `Redă sunetul din videoclipul introdus în camera curentă.\nVarianta scurtă a comenzii: ` +
+          `**${env.BOT_PREFIX}p <link YouTube>**`)
+        .addField('Exemple',
+          `${env.BOT_PREFIX}play <https://www.youtube.com/watch?v=dQw4w9WgXcQ>\n` +
+          `${env.BOT_PREFIX}p <https://youtube.com/watch?v=r_0JjYUe5jo>`)
+    );
+  }
+}
+
+/**
+ * Pauses/Unpauses the song playback
+ * @param msg Discord message object
+ * @param command Message command parameter
+ */
+function commandStartStop(msg: Discord.Message, command: string): void {
+  if (isPlaying === true) {
+    if (command === 'stop' || command === 's') {
+      dispatcher.pause(true);
+      isPlaying = false;
       msg.channel.send(
         new Discord.MessageEmbed()
           .setColor('#FFFF00')
-          .setTitle('Lista de redare este goală!')
+          .setTitle('Opresc melodia imediat!')
       );
     }
-    return;
+  } else {
+    if (songQueue !== undefined && songQueue.length !== 0) {
+      if (command === 'start' || command === 's') {
+        dispatcher.resume();
+        isPlaying = true;
+        msg.channel.send(
+          new Discord.MessageEmbed()
+            .setColor('#FFFF00')
+            .setTitle('Continuăm de unde am rămas!')
+        );
+      }
+    }
   }
+}
 
-  if (command === 'about' || command === 'despre') {
+/**
+ * Displays the song queue
+ * @param msg Message command parameter
+ */
+function commandQueue(msg: Discord.Message): void {
+  if (songQueue !== undefined && songQueue.length > 0) {
+    let musicList = `**Melodia curentă**\n` +
+      `${songQueue[0].videoTitle} **[${songQueue[0].videoDuration}]** \`Adăugat de\` <@${songQueue[0].addedBy}>\n` +
+      `-----------------------------------------------------------------------------------------------\n`;
+    for (let i = 1; i < songQueue.length; i++) {
+      musicList += `\`${i}.\` ${songQueue[i].videoTitle} **[${songQueue[i].videoDuration}]** ` +
+        `\`Adăugat de\` <@${songQueue[i].addedBy}>\n\n`;
+    }
+    msg.channel.send(new Discord.MessageEmbed()
+      .setColor('#00FF00')
+      .setTitle('Listă de redare')
+      .setDescription(musicList)
+    );
+  } else {
     msg.channel.send(
       new Discord.MessageEmbed()
-        .setColor('#0000FF')
-        .setTitle('Despre')
-        .setDescription('Bot de muzică destinat __exclusiv__ comunității **BOOSTED SHITZ**!')
-        .addFields(
-          { name: 'Dezvoltator', value: '<@242758294525968388>', inline: true },
-          { name: 'Licență', value: 'GPLv3', inline: true },
-          { name: 'Versiune', value: env.BOT_VERSION, inline: true },
-          {
-            name: '**Codul sursă este disponibil la adresa**',
-            value: 'https://github.com/GenneratorX/genbot-discord-bot',
-          }
-        )
+        .setColor('#FFFF00')
+        .setTitle('Lista de redare este goală!')
     );
-    return;
   }
+}
 
-  if (command === 'help' || command === 'h') {
-    msg.channel.send(
-      new Discord.MessageEmbed()
-        .setColor('#0000FF')
-        .setTitle('Pagină comenzi bot')
-        .addFields(
-          {
-            name: `\`1.\` **${env.BOT_PREFIX}play / ${env.BOT_PREFIX}p <link YouTube>**`,
-            value: 'Redă sunetul din videoclipul introdus',
-          },
-          {
-            name: `\`2.\` **${env.BOT_PREFIX}stop / ${env.BOT_PREFIX}s**`,
-            value: 'Oprește redarea videoclipului curent',
-          },
-          {
-            name: `\`3.\` **${env.BOT_PREFIX}start / ${env.BOT_PREFIX}s**`,
-            value: 'Repornește redarea videclipului curent',
-          },
-          {
-            name: `\`4.\` **${env.BOT_PREFIX}queue / ${env.BOT_PREFIX}q**`,
-            value: 'Afișează lista de redare',
-          },
-          {
-            name: `\`0.\` **${env.BOT_PREFIX}about / ${env.BOT_PREFIX}despre**`,
-            value: 'Afișează informații despre bot',
-          }
-        )
-    );
-    return;
-  }
-
+/**
+ * Displays the about page
+ * @param msg Message command parameter
+ */
+function commandAbout(msg: Discord.Message): void {
   msg.channel.send(
     new Discord.MessageEmbed()
-      .setColor('#FF0000')
-      .setDescription(`Nu am auzit de comanda aia. Scrie **${env.BOT_PREFIX}help** pentru a vizualiza lista de comenzi`)
+      .setColor('#0000FF')
+      .setTitle('Despre')
+      .setDescription('Bot de muzică destinat __exclusiv__ comunității **BOOSTED SHITZ**!')
+      .addFields(
+        { name: 'Dezvoltator', value: '<@242758294525968388>', inline: true },
+        { name: 'Licență', value: 'GPLv3', inline: true },
+        { name: 'Versiune', value: env.BOT_VERSION, inline: true },
+        {
+          name: '**Codul sursă este disponibil la adresa**',
+          value: 'https://github.com/GenneratorX/genbot-discord-bot',
+        }
+      )
   );
+}
 
-});
+/**
+ * Displays the help page
+ * @param msg Message command parameter
+ */
+function commandHelp(msg: Discord.Message): void {
+  msg.channel.send(
+    new Discord.MessageEmbed()
+      .setColor('#0000FF')
+      .setTitle('Pagină comenzi bot')
+      .addFields(
+        {
+          name: `\`1.\` **${env.BOT_PREFIX}play / ${env.BOT_PREFIX}p <link YouTube>**`,
+          value: 'Redă sunetul din videoclipul introdus',
+        },
+        {
+          name: `\`2.\` **${env.BOT_PREFIX}stop / ${env.BOT_PREFIX}s**`,
+          value: 'Oprește redarea videoclipului curent',
+        },
+        {
+          name: `\`3.\` **${env.BOT_PREFIX}start / ${env.BOT_PREFIX}s**`,
+          value: 'Repornește redarea videclipului curent',
+        },
+        {
+          name: `\`4.\` **${env.BOT_PREFIX}queue / ${env.BOT_PREFIX}q**`,
+          value: 'Afișează lista de redare',
+        },
+        {
+          name: `\`0.\` **${env.BOT_PREFIX}about / ${env.BOT_PREFIX}despre**`,
+          value: 'Afișează informații despre bot',
+        }
+      )
+  );
+}
 
 /**
  * Starts playing a song in the current voice channel
