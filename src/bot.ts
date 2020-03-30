@@ -9,7 +9,7 @@ let currentVoiceChannel: Discord.VoiceChannel;
 let connection: Discord.VoiceConnection;
 let dispatcher: Discord.StreamDispatcher;
 let isPlaying = false;
-let songQueue: { videoID: string; videoTitle: string; videoDuration: string; addedBy: string }[];
+let songQueue: { videoID: string; videoTitle: string; videoDuration: string; addedBy: string }[] = [];
 
 client.on('ready', () => {
   if (client.user !== null) {
@@ -110,7 +110,7 @@ function commandPlayPause(msg: Discord.Message, param: string, command: string):
         );
       }
     } else {
-      if (songQueue !== undefined && songQueue.length !== 0) {
+      if (songQueue.length !== 0) {
         if (command === 'play' || command === 'p') {
           dispatcher.resume();
           isPlaying = true;
@@ -141,7 +141,7 @@ function commandPlayPause(msg: Discord.Message, param: string, command: string):
  * @param msg Message command parameter
  */
 function commandQueue(msg: Discord.Message): void {
-  if (songQueue !== undefined && songQueue.length > 0) {
+  if (songQueue.length > 0) {
     let musicList = `**Melodia curentă**\n` +
       `${songQueue[0].videoTitle} **[${songQueue[0].videoDuration}]** \`Adăugat de\` <@${songQueue[0].addedBy}>\n` +
       `-----------------------------------------------------------------------------------------------\n`;
@@ -257,7 +257,7 @@ async function musicControl(ytLink: string): Promise<void> {
 function queueControl(action: 'add' | 'remove',
   videoInfo?: { videoID: string; videoTitle: string; videoDuration: string; addedBy: string }): void {
   if (action === 'add' && videoInfo !== undefined) {
-    if (songQueue !== undefined && songQueue.length > 0) {
+    if (songQueue.length > 0) {
       songQueue.push(videoInfo);
     } else {
       songQueue = [videoInfo];
