@@ -31,11 +31,9 @@ client.on('message', (msg: Discord.Message) => {
   console.log(`[COMMAND] ${command} [PARAM] ${param}`);
 
   switch (command) {
-    case 'play': commandPlay(msg, param); break;
-    case 'p': commandPlay(msg, param); break;
-    case 'start': commandStartStop(msg, command); break;
-    case 'stop': commandStartStop(msg, command); break;
-    case 's': commandStartStop(msg, command); break;
+    case 'play': commandPlayPause(msg, param, command); break;
+    case 'p': commandPlayPause(msg, param, command); break;
+    case 'pause': commandPlayPause(msg, param, command); break;
     case 'queue': commandQueue(msg); break;
     case 'q': commandQueue(msg); break;
     case 'about': commandAbout(msg); break;
@@ -47,7 +45,7 @@ client.on('message', (msg: Discord.Message) => {
         new Discord.MessageEmbed()
           .setColor('#FF0000')
           .setDescription(`Nu am auzit de comanda aia. ` +
-            `Scrie **${env.BOT_PREFIX}help** pentru a vizualiza lista de comenzi`)
+            `Scrie **${env.BOT_PREFIX}help** pentru a vizualiza lista de comenzi.`)
       );
       break;
   }
@@ -57,8 +55,9 @@ client.on('message', (msg: Discord.Message) => {
  * Prepares the song to be played by the bot
  * @param msg Discord message object
  * @param param Message command parameter
+ * @param command Message command
  */
-function commandPlay(msg: Discord.Message, param: string): void {
+function commandPlayPause(msg: Discord.Message, param: string, command: string): void {
   if (param.length > 0) {
     if (msg.member !== null && msg.member.voice.channel !== null) {
       getSongInfo(param)
@@ -100,7 +99,30 @@ function commandPlay(msg: Discord.Message, param: string): void {
       );
     }
   } else {
-    msg.channel.send(
+    if (isPlaying === true) {
+      if (command === 'pause' || command === 'p') {
+        dispatcher.pause(true);
+        isPlaying = false;
+        msg.channel.send(
+          new Discord.MessageEmbed()
+            .setColor('#FFFF00')
+            .setTitle('Opresc melodia imediat!')
+        );
+      }
+    } else {
+      if (songQueue !== undefined && songQueue.length !== 0) {
+        if (command === 'play' || command === 'p') {
+          dispatcher.resume();
+          isPlaying = true;
+          msg.channel.send(
+            new Discord.MessageEmbed()
+              .setColor('#FFFF00')
+              .setTitle('Continuăm de unde am rămas!')
+          );
+        }
+      }
+    }
+    /*msg.channel.send(
       new Discord.MessageEmbed()
         .setColor('#00FF00')
         .setTitle(`${env.BOT_PREFIX}play <link YouTube>`)
@@ -110,38 +132,7 @@ function commandPlay(msg: Discord.Message, param: string): void {
         .addField('Exemple',
           `${env.BOT_PREFIX}play <https://www.youtube.com/watch?v=dQw4w9WgXcQ>\n` +
           `${env.BOT_PREFIX}p <https://youtube.com/watch?v=r_0JjYUe5jo>`)
-    );
-  }
-}
-
-/**
- * Pauses/Unpauses the song playback
- * @param msg Discord message object
- * @param command Message command parameter
- */
-function commandStartStop(msg: Discord.Message, command: string): void {
-  if (isPlaying === true) {
-    if (command === 'stop' || command === 's') {
-      dispatcher.pause(true);
-      isPlaying = false;
-      msg.channel.send(
-        new Discord.MessageEmbed()
-          .setColor('#FFFF00')
-          .setTitle('Opresc melodia imediat!')
-      );
-    }
-  } else {
-    if (songQueue !== undefined && songQueue.length !== 0) {
-      if (command === 'start' || command === 's') {
-        dispatcher.resume();
-        isPlaying = true;
-        msg.channel.send(
-          new Discord.MessageEmbed()
-            .setColor('#FFFF00')
-            .setTitle('Continuăm de unde am rămas!')
-        );
-      }
-    }
+    );*/
   }
 }
 
@@ -205,19 +196,15 @@ function commandHelp(msg: Discord.Message): void {
       .setTitle('Pagină comenzi bot')
       .addFields(
         {
-          name: `\`1.\` **${env.BOT_PREFIX}play / ${env.BOT_PREFIX}p <link YouTube>**`,
-          value: 'Redă sunetul din videoclipul introdus',
+          name: `\`1.\` **${env.BOT_PREFIX}play / ${env.BOT_PREFIX}p [link YouTube]**`,
+          value: 'Redă sunetul din videoclipul introdus sau pornește redarea sunetului dacă acesta a fost oprit',
         },
         {
-          name: `\`2.\` **${env.BOT_PREFIX}stop / ${env.BOT_PREFIX}s**`,
+          name: `\`2.\` **${env.BOT_PREFIX}pause / ${env.BOT_PREFIX}p**`,
           value: 'Oprește redarea videoclipului curent',
         },
         {
-          name: `\`3.\` **${env.BOT_PREFIX}start / ${env.BOT_PREFIX}s**`,
-          value: 'Repornește redarea videclipului curent',
-        },
-        {
-          name: `\`4.\` **${env.BOT_PREFIX}queue / ${env.BOT_PREFIX}q**`,
+          name: `\`3.\` **${env.BOT_PREFIX}queue / ${env.BOT_PREFIX}q**`,
           value: 'Afișează lista de redare',
         },
         {
