@@ -323,7 +323,7 @@ async function getSongInfo(ytLink: string): Promise<{ videoID: string; videoTitl
 
     return {
       videoID: songInfo.player_response.videoDetails.videoId,
-      videoTitle: songInfo.player_response.videoDetails.title,
+      videoTitle: Discord.Util.escapeMarkdown(songInfo.player_response.videoDetails.title),
       videoDuration: `${minutes}:${seconds}`,
     };
   } else {
