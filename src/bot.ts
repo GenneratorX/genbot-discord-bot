@@ -326,8 +326,9 @@ async function getSongInfo(ytLink: string): Promise<{ videoID: string; videoTitl
       videoTitle: songInfo.player_response.videoDetails.title,
       videoDuration: `${minutes}:${seconds}`,
     };
+  } else {
+    throw new Error('invalidYTLink');
   }
-  throw new Error('invalidYTLink');
 }
 
 client.login(env.BOT_TOKEN);
