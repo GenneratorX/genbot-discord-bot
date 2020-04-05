@@ -86,15 +86,15 @@ function commandPlayPause(msg: Discord.Message, param: string, command: string):
               )
           );
         })
-        .catch((err) => {
-          if (err === 'invalidYTLink') {
+        .catch((error) => {
+          if (error === 'invalidYTLink') {
             msg.channel.send(
               new Discord.MessageEmbed()
                 .setColor('#FF0000')
                 .setTitle('Link-ul introdus este invalid!')
             );
           } else {
-            console.log(err);
+            console.log(error);
             msg.channel.send(
               new Discord.MessageEmbed()
                 .setColor('#FF0000')
@@ -248,39 +248,52 @@ function commandHelp(msg: Discord.Message): void {
 }
 
 /**
- * Starts playing a song in the current voice channel
- * @param ytLink YouTube [video link | video ID]
+ * Voice channel connection error listener
+ * @param error Error message
  */
-async function musicControl(ytLink: string): Promise<void> {
+const connectionError = (error: Error): void => {
+  console.log(error);
+};
+
+/**
+ * Voice channel connection disconnect listener
+ */
+const connectionDisconnect = (): void => {
+  console.log(`[DISCONNECTED FROM VOICE CHANNEL]`);
+  songQueue.length = 0;
+  isPlaying = false;
+};
+
+/**
+ * Starts playing a song in the current voice channel
+ * @param ytVideoID YouTube video ID
+ */
+async function musicControl(ytVideoID: string): Promise<void> {
   try {
-    connection = await currentVoiceChannel.join();
-    dispatcher = connection.play(await ytdl(ytLink, env.YTDL_CONFIG), env.DISPATCHER_CONFIG);
+    if (connection === undefined || connection.status === 4) {
+      connection = await currentVoiceChannel.join();
+    }
+    dispatcher = connection.play(await ytdl(ytVideoID, env.YTDL_CONFIG), env.DISPATCHER_CONFIG);
+
+    connection.removeListener('error', connectionError);
+    connection.removeListener('disconnect', connectionDisconnect);
+    connection.on('error', connectionError);
+    connection.on('disconnect', connectionDisconnect);
 
     dispatcher.on('start', () => {
-      console.log(`  -Song started ${ytLink}`);
+      console.log(`  [SONG START] ${ytVideoID}`);
       isPlaying = true;
     });
 
     dispatcher.on('finish', () => {
-      console.log(`  -Song ended ${ytLink}`);
-
+      console.log(`  [SONG END]   ${ytVideoID}`);
       isPlaying = false;
       queueControl('remove');
-
-      if (songQueue.length === 0) {
-        connection.disconnect();
-      }
     });
 
-    connection.on('error', console.log);
     dispatcher.on('error', console.log);
-
-    connection.on('disconnect', () => {
-      console.log(`DISCONNECTED`);
-      songQueue.length = 0;
-      isPlaying = false;
-    });
   } catch (error) {
+    console.log('  [!!!] Error in musicControl');
     console.log(error);
   }
 }
