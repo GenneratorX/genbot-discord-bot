@@ -28,7 +28,7 @@ client.on('message', (msg: Discord.Message) => {
   const command = (split.shift() as string).substring(1);
   const param = split.join(' ');
 
-  console.log(`[COMMAND] ${command} [PARAM] ${param}`);
+  console.log(`[COMMAND L=${command.length}] ${command} [PARAM L=${param.length}] ${param}`);
 
   switch (command) {
     case 'play': commandPlayPause(msg, param, command); break;
@@ -86,12 +86,21 @@ function commandPlayPause(msg: Discord.Message, param: string, command: string):
               )
           );
         })
-        .catch(() => {
-          msg.channel.send(
-            new Discord.MessageEmbed()
-              .setColor('#FF0000')
-              .setTitle('Link-ul introdus este invalid!')
-          );
+        .catch((err) => {
+          if (err === 'invalidYTLink') {
+            msg.channel.send(
+              new Discord.MessageEmbed()
+                .setColor('#FF0000')
+                .setTitle('Link-ul introdus este invalid!')
+            );
+          } else {
+            console.log(err);
+            msg.channel.send(
+              new Discord.MessageEmbed()
+                .setColor('#FF0000')
+                .setTitle('Ceva nu a mers bine ... mai încearcă odată!')
+            );
+          }
         });
     } else {
       msg.channel.send(
@@ -248,12 +257,12 @@ async function musicControl(ytLink: string): Promise<void> {
     dispatcher = connection.play(await ytdl(ytLink, env.YTDL_CONFIG), env.DISPATCHER_CONFIG);
 
     dispatcher.on('start', () => {
-      console.log(`Song started ${ytLink}`);
+      console.log(`  -Song started ${ytLink}`);
       isPlaying = true;
     });
 
     dispatcher.on('finish', () => {
-      console.log(`Song ended ${ytLink}`);
+      console.log(`  -Song ended ${ytLink}`);
 
       isPlaying = false;
       queueControl('remove');
@@ -267,7 +276,7 @@ async function musicControl(ytLink: string): Promise<void> {
     dispatcher.on('error', console.log);
 
     connection.on('disconnect', () => {
-      console.log(`Am ieșit!`);
+      console.log(`DISCONNECTED`);
       songQueue.length = 0;
       isPlaying = false;
     });
@@ -305,7 +314,7 @@ function queueControl(action: 'add' | 'remove',
 /**
  * Gets the song info of a YouTube video
  * @param ytLink YouTube video URL to get the song info from
- * @return Song info
+ * @return Song info object
  */
 async function getSongInfo(ytLink: string): Promise<{ videoID: string; videoTitle: string; videoDuration: string }> {
   if (ytdl.validateURL(ytLink) === true) {
@@ -326,9 +335,8 @@ async function getSongInfo(ytLink: string): Promise<{ videoID: string; videoTitl
       videoTitle: Discord.Util.escapeMarkdown(songInfo.player_response.videoDetails.title),
       videoDuration: `${minutes}:${seconds}`,
     };
-  } else {
-    throw new Error('invalidYTLink');
   }
+  throw new Error('invalidYTLink');
 }
 
 client.login(env.BOT_TOKEN);
