@@ -15,7 +15,7 @@ client.on('ready', () => {
   if (client.user !== null) {
     console.log(`Logged in as ${client.user.tag}!`);
     client.user.setStatus('online');
-    client.user.setActivity('your requests', { type: 'LISTENING' });
+    client.user.setActivity('to NOONE!', { type: 'LISTENING' });
   }
 });
 
@@ -63,7 +63,7 @@ function commandPlayPause(msg: Discord.Message, param: string, command: string):
   if (param.length > 0) {
     if (msg.member !== null && msg.member.voice.channel !== null) {
       getSongInfo(param)
-        .then((info) => {
+        .then(info => {
           currentVoiceChannel = (msg.member as Discord.GuildMember).voice.channel as Discord.VoiceChannel;
           queueControl('add', {
             videoID: info.videoID,
@@ -86,7 +86,7 @@ function commandPlayPause(msg: Discord.Message, param: string, command: string):
               )
           );
         })
-        .catch((error) => {
+        .catch(error => {
           if (error === 'invalidYTLink') {
             msg.channel.send(
               new Discord.MessageEmbed()
