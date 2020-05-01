@@ -19,7 +19,7 @@ client.on('error', error => {
   console.log(error);
 });
 
-client.on('message', (msg: Discord.Message) => {
+client.on('message', msg => {
   if ((msg.channel.id !== '363672801451966464' && msg.channel.id !== '363106595132932098') ||
     msg.author.bot === true ||
     msg.content.startsWith(env.BOT_PREFIX) === false) return;
@@ -38,17 +38,12 @@ client.on('message', (msg: Discord.Message) => {
     case 's': commandSkip(); break;
     case 'queue': commandQueue(); break;
     case 'q': commandQueue(); break;
+    case 'remove': commandRemove(param); break;
+    case 'r': commandRemove(param); break;
     case 'about': commandAbout(msg); break;
     case 'despre': commandAbout(msg); break;
     case 'help': commandHelp(msg); break;
     case 'h': commandHelp(msg); break;
-    case 'sa':
-      client.channels.fetch('363672801451966464').then(chn => {
-        if (chn.type === 'text') {
-          (chn as Discord.TextChannel).send('sa');
-        }
-      });
-      break;
     default:
       msg.channel.send(
         new Discord.MessageEmbed()
@@ -66,7 +61,7 @@ client.on('message', (msg: Discord.Message) => {
  * @param param Message command parameter
  * @param command Message command
  */
-function commandPlayPause(msg: Discord.Message, param: string, command: string): void {
+function commandPlayPause(msg: Discord.Message, param: string, command: string) {
   if (param.length > 0) {
     if (musicPlayer !== undefined && musicPlayer.songCount !== 0) {
       musicPlayer.addSong(param, msg.author.id);
@@ -103,9 +98,8 @@ function commandPlayPause(msg: Discord.Message, param: string, command: string):
 
 /**
  * Skips the current song if there is any
- * @param msg Discord message object
  */
-function commandSkip(): void {
+function commandSkip() {
   if (musicPlayer !== undefined) {
     musicPlayer.skipSong();
   }
@@ -113,11 +107,20 @@ function commandSkip(): void {
 
 /**
  * Displays the song queue
- * @param msg Message command parameter
  */
-function commandQueue(): void {
+function commandQueue() {
   if (musicPlayer !== undefined) {
     musicPlayer.displaySongQueue();
+  }
+}
+
+/**
+ * Remove a song from the song queue
+ * @param param Message command parameter
+ */
+function commandRemove(param: string) {
+  if (musicPlayer !== undefined) {
+    musicPlayer.removeSong(parseInt(param) - 1);
   }
 }
 
@@ -125,7 +128,7 @@ function commandQueue(): void {
  * Displays the about page
  * @param msg Message command parameter
  */
-function commandAbout(msg: Discord.Message): void {
+function commandAbout(msg: Discord.Message) {
   msg.channel.send(
     new Discord.MessageEmbed()
       .setColor('#0000FF')
@@ -154,7 +157,7 @@ function commandAbout(msg: Discord.Message): void {
  * Displays the help page
  * @param msg Message command parameter
  */
-function commandHelp(msg: Discord.Message): void {
+function commandHelp(msg: Discord.Message) {
   msg.channel.send(
     new Discord.MessageEmbed()
       .setColor('#0000FF')
@@ -171,6 +174,9 @@ function commandHelp(msg: Discord.Message): void {
       }, {
         name: `\`4.\` **${env.BOT_PREFIX}queue / ${env.BOT_PREFIX}q**`,
         value: 'Afișează lista de redare',
+      }, {
+        name: `\`5.\` **${env.BOT_PREFIX}remove / ${env.BOT_PREFIX}r [poziție melodie]**`,
+        value: 'Șterge melodia din lista de redare',
       }, {
         name: `\`0.\` **${env.BOT_PREFIX}about / ${env.BOT_PREFIX}despre**`,
         value: 'Afișează informații despre bot',

@@ -104,16 +104,30 @@ export class MusicPlayer {
    * @param songPosition Position of the song in the song queue
    */
   removeSong(songPosition: number) {
-    if (this.songList[songPosition] !== undefined) {
-      this.songList.splice(songPosition, 1);
-      if (songPosition === this.currentSong) {
-        this.playSong(songPosition);
+    if (isNaN(songPosition) === false && songPosition >= 0) {
+      if (this.songList[songPosition] !== undefined) {
+        this.songList.splice(songPosition, 1);
+        if (songPosition === this.currentSong) {
+          if (this.songList[songPosition] !== undefined) {
+            this.playSong(songPosition);
+          } else {
+            if (this.streamDispatcher !== undefined) {
+              this.streamDispatcher.end();
+            }
+          }
+        }
+      } else {
+        this.currentTextChannel.send(
+          new Discord.MessageEmbed()
+            .setColor('#FF0000')
+            .setTitle(`Poziția **${songPosition + 1}** nu există!`)
+        );
       }
     } else {
       this.currentTextChannel.send(
         new Discord.MessageEmbed()
           .setColor('#FF0000')
-          .setTitle(`Poziția **${songPosition}** nu există!`)
+          .setTitle(`Poziția trebuie să fie un număr întreg pozitiv!`)
       );
     }
   }
@@ -172,7 +186,7 @@ export class MusicPlayer {
         });
 
         this.streamDispatcher.on('finish', () => {
-          console.log(`  [SONG END]   ${this.songList[songPosition].ytdlVideoInfo.video_id}`);
+          console.log(`  [SONG END]`);
           this.isPlaying = false;
           this.playSong(songPosition + 1);
         });
@@ -205,9 +219,9 @@ export class MusicPlayer {
         this.currentTextChannel.send(
           new Discord.MessageEmbed()
             .setColor('#FFFF00')
-            .setTitle('Nimeni nu m-a mai băgat în seamă de ceva timp așa că am ieșit!')
+            .setTitle('Am stat degeaba 5 minute ... așa că am ieșit!')
         );
-      }, 10000); // 5 minutes = 300000
+      }, 300000); // 5 minutes
     }
   }
 
@@ -264,11 +278,11 @@ export class MusicPlayer {
       for (let i = 0; i < this.songList.length; i++) {
         if (i === this.currentSong) {
           songQueue +=
-            `**===========================================================**\n` +
-            `\`${i + 1}.\` **${Discord.Util.escapeMarkdown(this.songList[i].ytdlVideoInfo.title)} ` +
-            `[${prettyPrintDuration(this.songList[i].ytdlVideoInfo.player_response.videoDetails.lengthSeconds)}]** ` +
-            `\`Adăugat de\`<@${this.songList[i].addedBy}>\n` +
-            `**===========================================================**\n`;
+            `**==================== [ MELODIA CURENTĂ ] ====================**\n` +
+            `**\`${i + 1}.\` ${Discord.Util.escapeMarkdown(this.songList[i].ytdlVideoInfo.title)} ` +
+            `[${prettyPrintDuration(this.songList[i].ytdlVideoInfo.player_response.videoDetails.lengthSeconds)}] ` +
+            `\`Adăugat de\`<@${this.songList[i].addedBy}>**\n` +
+            `**==========================================================**\n`;
         } else {
           songQueue +=
             `\`${i + 1}.\` ${Discord.Util.escapeMarkdown(this.songList[i].ytdlVideoInfo.title)} ` +
