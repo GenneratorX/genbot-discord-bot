@@ -1,16 +1,11 @@
 'use strict';
 
 import Discord = require('discord.js');
-import ytdl = require('ytdl-core');
 import env = require('./env');
+import { MusicPlayer } from './musicPlayer';
 const client = new Discord.Client();
 
-let currentVoiceChannel: Discord.VoiceChannel;
-let currentTextChannel: Discord.TextChannel;
-let connection: Discord.VoiceConnection;
-let dispatcher: Discord.StreamDispatcher;
-let isPlaying = false;
-let songQueue: { ytdlSongInfo: ytdl.videoInfo, addedBy: string }[] = [];
+let musicPlayer: MusicPlayer;
 
 client.on('ready', () => {
   if (client.user !== null) {
@@ -18,6 +13,10 @@ client.on('ready', () => {
     client.user.setStatus('online');
     client.user.setActivity('your requests!', { type: 'LISTENING' });
   }
+});
+
+client.on('error', error => {
+  console.log(error);
 });
 
 client.on('message', (msg: Discord.Message) => {
@@ -35,14 +34,21 @@ client.on('message', (msg: Discord.Message) => {
     case 'play': commandPlayPause(msg, param, command); break;
     case 'pause': commandPlayPause(msg, param, command); break;
     case 'p': commandPlayPause(msg, param, command); break;
-    case 'skip': commandSkip(msg); break;
-    case 's': commandSkip(msg); break;
-    case 'queue': commandQueue(msg); break;
-    case 'q': commandQueue(msg); break;
+    case 'skip': commandSkip(); break;
+    case 's': commandSkip(); break;
+    case 'queue': commandQueue(); break;
+    case 'q': commandQueue(); break;
     case 'about': commandAbout(msg); break;
     case 'despre': commandAbout(msg); break;
     case 'help': commandHelp(msg); break;
     case 'h': commandHelp(msg); break;
+    case 'sa':
+      client.channels.fetch('363672801451966464').then(chn => {
+        if (chn.type === 'text') {
+          (chn as Discord.TextChannel).send('sa');
+        }
+      });
+      break;
     default:
       msg.channel.send(
         new Discord.MessageEmbed()
@@ -62,79 +68,33 @@ client.on('message', (msg: Discord.Message) => {
  */
 function commandPlayPause(msg: Discord.Message, param: string, command: string): void {
   if (param.length > 0) {
-    if (msg.member !== null && msg.member.voice.channel !== null) {
-      if (ytdl.validateURL(param) === true) {
-        ytdl.getInfo(param)
-          .then(info => {
-            currentVoiceChannel = (msg.member as Discord.GuildMember).voice.channel as Discord.VoiceChannel;
-            currentTextChannel = msg.channel as Discord.TextChannel;
-            queueControl('add', {
-              ytdlSongInfo: info,
-              addedBy: msg.author.id,
-            });
-            msg.channel.send(
-              new Discord.MessageEmbed()
-                .setColor('#00FF00')
-                .setAuthor('Adăugare melodie')
-                .setTitle(Discord.Util.escapeMarkdown(info.title))
-                .addFields({
-                  name: 'Adăugat de',
-                  value: `<@${msg.author.id}>`,
-                  inline: true,
-                }, {
-                  name: 'Durata',
-                  value: prettyPrintDuration(info.player_response.videoDetails.lengthSeconds),
-                  inline: true,
-                }, {
-                  name: 'Poziție',
-                  value: songQueue.length,
-                  inline: true,
-                })
-            );
-          })
-          .catch(error => {
-            console.log(error);
-            msg.channel.send(
-              new Discord.MessageEmbed()
-                .setColor('#FF0000')
-                .setTitle('Ceva nu a mers bine ... mai încearcă odată!')
-            );
-          });
+    if (musicPlayer !== undefined && musicPlayer.songCount !== 0) {
+      musicPlayer.addSong(param, msg.author.id);
+    } else {
+      if (msg.member !== null && msg.member.voice.channel !== null) {
+        musicPlayer = new MusicPlayer(
+          param,
+          msg.author.id,
+          msg.channel as Discord.TextChannel,
+          msg.member.voice.channel
+        );
       } else {
         msg.channel.send(
           new Discord.MessageEmbed()
             .setColor('#FF0000')
-            .setTitle('Link-ul introdus este invalid!')
+            .setTitle('Intră într-o cameră de voce că altfel o să ascult melodia singur!')
         );
       }
-    } else {
-      msg.channel.send(
-        new Discord.MessageEmbed()
-          .setColor('#FF0000')
-          .setTitle('Intră într-o cameră de voce că altfel o să ascult melodia singur!')
-      );
     }
   } else {
-    if (isPlaying === true) {
-      if (command === 'pause' || command === 'p') {
-        dispatcher.pause(true);
-        isPlaying = false;
-        msg.channel.send(
-          new Discord.MessageEmbed()
-            .setColor('#FFFF00')
-            .setTitle('Opresc melodia imediat!')
-        );
-      }
-    } else {
-      if (songQueue.length !== 0) {
+    if (musicPlayer !== undefined && musicPlayer.songCount !== 0) {
+      if (musicPlayer.isplaying === true) {
+        if (command === 'pause' || command === 'p') {
+          musicPlayer.pause();
+        }
+      } else {
         if (command === 'play' || command === 'p') {
-          dispatcher.resume();
-          isPlaying = true;
-          msg.channel.send(
-            new Discord.MessageEmbed()
-              .setColor('#FFFF00')
-              .setTitle('Continuăm de unde am rămas!')
-          );
+          musicPlayer.unpause();
         }
       }
     }
@@ -145,16 +105,9 @@ function commandPlayPause(msg: Discord.Message, param: string, command: string):
  * Skips the current song if there is any
  * @param msg Discord message object
  */
-function commandSkip(msg: Discord.Message): void {
-  if (songQueue.length > 0) {
-    queueControl('remove');
-    if (songQueue.length > 0) {
-      msg.channel.send(
-        new Discord.MessageEmbed()
-          .setColor('#FFFF00')
-          .setTitle('Trecem la următoarea melodie...')
-      );
-    }
+function commandSkip(): void {
+  if (musicPlayer !== undefined) {
+    musicPlayer.skipSong();
   }
 }
 
@@ -162,29 +115,9 @@ function commandSkip(msg: Discord.Message): void {
  * Displays the song queue
  * @param msg Message command parameter
  */
-function commandQueue(msg: Discord.Message): void {
-  if (songQueue.length > 0) {
-    let musicList = `**Melodia curentă**\n` +
-      `${songQueue[0].ytdlSongInfo.title} ` +
-      `**[${prettyPrintDuration(songQueue[0].ytdlSongInfo.player_response.videoDetails.lengthSeconds)}]** ` +
-      `\`Adăugat de\` <@${songQueue[0].addedBy}>\n` +
-      `-----------------------------------------------------------------------------------------------\n`;
-    for (let i = 1; i < songQueue.length; i++) {
-      musicList += `\`${i}.\` ${songQueue[i].ytdlSongInfo.title} ` +
-        `**[${prettyPrintDuration(songQueue[i].ytdlSongInfo.player_response.videoDetails.lengthSeconds)}]** ` +
-        `\`Adăugat de\` <@${songQueue[i].addedBy}>\n\n`;
-    }
-    msg.channel.send(new Discord.MessageEmbed()
-      .setColor('#00FF00')
-      .setTitle('Listă de redare')
-      .setDescription(musicList)
-    );
-  } else {
-    msg.channel.send(
-      new Discord.MessageEmbed()
-        .setColor('#FFFF00')
-        .setTitle('Lista de redare este goală!')
-    );
+function commandQueue(): void {
+  if (musicPlayer !== undefined) {
+    musicPlayer.displaySongQueue();
   }
 }
 
@@ -243,127 +176,6 @@ function commandHelp(msg: Discord.Message): void {
         value: 'Afișează informații despre bot',
       })
   );
-}
-
-/**
- * Voice channel connection error listener
- * @param error Error message
- */
-const connectionError = (error: Error): void => {
-  console.log(error);
-};
-
-/**
- * Voice channel connection disconnect listener
- */
-const connectionDisconnect = (): void => {
-  console.log(`[DISCONNECTED FROM VOICE CHANNEL]`);
-  songQueue.length = 0;
-  isPlaying = false;
-};
-
-/**
- * Starts playing a song in the current voice channel
- * @param ytdlSongInfo YTDL video info object
- */
-async function musicControl(ytdlSongInfo: ytdl.videoInfo): Promise<void> {
-  try {
-    if (connection === undefined || connection.status === 4) {
-      connection = await currentVoiceChannel.join();
-    }
-
-    dispatcher = connection.play(ytdl.downloadFromInfo(ytdlSongInfo, env.YTDL_CONFIG), env.DISPATCHER_CONFIG);
-
-    connection.removeListener('error', connectionError);
-    connection.removeListener('disconnect', connectionDisconnect);
-    connection.on('error', connectionError);
-    connection.on('disconnect', connectionDisconnect);
-
-    dispatcher.on('start', () => {
-      console.log(`  [SONG START] ${ytdlSongInfo.video_id}`);
-      isPlaying = true;
-      currentTextChannel.send(
-        new Discord.MessageEmbed()
-          .setColor('#00FF00')
-          .setAuthor('În curs de redare...')
-          .setTitle(`🎵🎵 ${Discord.Util.escapeMarkdown(ytdlSongInfo.title)} 🎵🎵`)
-          .addFields({
-            name: 'Adăugat de',
-            value: `<@${songQueue[0].addedBy}>`,
-            inline: true,
-          }, {
-            name: 'Link YouTube',
-            value: `https://www.youtube.com/watch?v=${ytdlSongInfo.video_id}`,
-            inline: true,
-          })
-      );
-    });
-
-    dispatcher.on('finish', () => {
-      console.log(`  [SONG END]   ${ytdlSongInfo.video_id}`);
-      isPlaying = false;
-      queueControl('remove');
-    });
-
-    dispatcher.on('error', error => {
-      console.log(error);
-      if (error.name === 'input stream' && error.message === 'Too many redirects') {
-        dispatcher = connection.play(ytdl.downloadFromInfo(ytdlSongInfo, env.YTDL_CONFIG), env.DISPATCHER_CONFIG);
-      }
-    });
-  } catch (error) {
-    console.log('  [!!!] Error in musicControl');
-    console.log(error);
-  }
-}
-
-/**
- * Adds/Removes songs from the song queue
- * @param action Add/Remove YouTube link from song queue
- * @param videoInfo Video information object
- */
-function queueControl(
-  action: 'add' | 'remove',
-  videoInfo?: {
-    ytdlSongInfo: ytdl.videoInfo,
-    addedBy: string
-  }): void {
-  if (action === 'add' && videoInfo !== undefined) {
-    if (songQueue.length > 0) {
-      songQueue.push(videoInfo);
-    } else {
-      songQueue = [videoInfo];
-      musicControl(videoInfo.ytdlSongInfo);
-    }
-  } else {
-    if (songQueue.length > 0) {
-      songQueue.shift();
-      if (songQueue.length > 0) {
-        musicControl(songQueue[0].ytdlSongInfo);
-      } else {
-        connection.disconnect();
-      }
-    }
-  }
-}
-
-/**
- * Prints duration in minutes:seconds format
- * @param duration Duration in seconds
- * @returns Pretty time
- */
-function prettyPrintDuration(duration: number) {
-  let minutes = Math.floor(duration / 60).toString();
-  let seconds = (duration % 60).toString();
-
-  if (minutes.length === 1) {
-    minutes = '0' + minutes;
-  }
-  if (seconds.length === 1) {
-    seconds = '0' + seconds;
-  }
-
-  return `${minutes}:${seconds}`;
 }
 
 client.login(env.BOT_TOKEN);
