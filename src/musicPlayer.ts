@@ -336,12 +336,13 @@ export class MusicPlayer {
 }
 
 /**
- * Prints duration in minutes:seconds format
+ * Prints duration in hours:minutes:seconds format
  * @param duration Duration in seconds
  * @returns Pretty time
  */
 function prettyPrintDuration(duration: number) {
-  let minutes = Math.floor(duration / 60).toString();
+  let hours = Math.floor(duration / 3600).toString();
+  let minutes = Math.floor(duration % 3600 / 60).toString();
   let seconds = (duration % 60).toString();
 
   if (minutes.length === 1) {
@@ -351,5 +352,13 @@ function prettyPrintDuration(duration: number) {
     seconds = '0' + seconds;
   }
 
-  return `${minutes}:${seconds}`;
+  if (hours === '0') {
+    return `${minutes}:${seconds}`;
+  }
+
+  if (hours.length === 1) {
+    return `0${hours}:${minutes}:${seconds}`;
+  }
+
+  return `${hours}:${minutes}:${seconds}`;
 }
