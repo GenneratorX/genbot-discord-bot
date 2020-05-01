@@ -281,13 +281,13 @@ export class MusicPlayer {
             `**==================== [ MELODIA CURENTĂ ] ====================**\n` +
             `**\`${i + 1}.\` ${Discord.Util.escapeMarkdown(this.songList[i].ytdlVideoInfo.title)} ` +
             `[${prettyPrintDuration(this.songList[i].ytdlVideoInfo.player_response.videoDetails.lengthSeconds)}] ` +
-            `\`Adăugat de\`<@${this.songList[i].addedBy}>**\n` +
+            `[<@${this.songList[i].addedBy}>]**\n` +
             `**==========================================================**\n`;
         } else {
           songQueue +=
             `\`${i + 1}.\` ${Discord.Util.escapeMarkdown(this.songList[i].ytdlVideoInfo.title)} ` +
-            `**[${prettyPrintDuration(this.songList[i].ytdlVideoInfo.player_response.videoDetails.lengthSeconds)}]** ` +
-            `\`Adăugat de\`<@${this.songList[i].addedBy}>\n`;
+            `**[${prettyPrintDuration(this.songList[i].ytdlVideoInfo.player_response.videoDetails.lengthSeconds)}] ` +
+            `[<@${this.songList[i].addedBy}>]**\n`;
         }
       }
       this.currentTextChannel.send(
