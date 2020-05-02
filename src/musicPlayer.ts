@@ -107,6 +107,7 @@ export class MusicPlayer {
     if (isNaN(songPosition) === false && songPosition >= 0) {
       if (this.songList[songPosition] !== undefined) {
         this.songList.splice(songPosition, 1);
+
         if (songPosition === this.currentSong) {
           if (this.songList[songPosition] !== undefined) {
             this.playSong(songPosition);
@@ -116,6 +117,16 @@ export class MusicPlayer {
             }
           }
         }
+
+        if (songPosition < this.currentSong) {
+          this.currentSong--;
+        }
+
+        this.currentTextChannel.send(
+          new Discord.MessageEmbed()
+            .setColor('#FF0000')
+            .setTitle(`Am șters melodia aflată pe poziția ${songPosition + 1}`)
+        );
       } else {
         this.currentTextChannel.send(
           new Discord.MessageEmbed()
@@ -141,11 +152,13 @@ export class MusicPlayer {
       clearTimeout(this.disconnectTimer);
       this.currentSong = songPosition;
       try {
-        if (this.voiceConnection === undefined || this.voiceConnection.status === 4) {
+        if (this.voiceConnection === undefined) {
+          console.log(`[CREATED VOICE CONNECTION]`);
           this.voiceConnection = await this.currentVoiceChannel.join();
 
           this.voiceConnection.on('disconnect', () => {
             console.log(`[DISCONNECTED FROM VOICE CHANNEL]`);
+            clearTimeout(this.disconnectTimer);
             this.songList.length = 0;
           });
 
