@@ -159,7 +159,9 @@ export class MusicPlayer {
           this.voiceConnection.on('disconnect', () => {
             console.log(`[DISCONNECTED FROM VOICE CHANNEL]`);
             clearTimeout(this.disconnectTimer);
-            this.songList.length = 0;
+            while (this.songList.length > 0) {
+              this.songList.pop();
+            }
           });
 
           this.voiceConnection.on('error', error => {
