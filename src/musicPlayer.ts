@@ -229,11 +229,29 @@ export class MusicPlayer {
         });
       } catch (error) {
         console.log(error);
-        this.currentTextChannel.send(
-          new Discord.MessageEmbed()
-            .setColor('#FF0000')
-            .setTitle('Ceva nu a mers bine ... mai încearcă odată!')
-        );
+        switch (error.message) {
+          case 'You do not have permission to join this voice channel.':
+            this.currentTextChannel.send(
+              new Discord.MessageEmbed()
+                .setColor('#FF0000')
+                .setTitle('Nu am permisiunile necesare pentru a intra în camera de voce!')
+            );
+            break;
+          case 'Connection not established within 15 seconds.':
+            this.currentTextChannel.send(
+              new Discord.MessageEmbed()
+                .setColor('#FF0000')
+                .setTitle('Am încercat să intru în camera de voce însă nu am reușit. O să încerc să intru iar imediat!')
+            );
+            this.playSong(songPosition);
+            break;
+          default:
+            this.currentTextChannel.send(
+              new Discord.MessageEmbed()
+                .setColor('#FF0000')
+                .setTitle('Ceva nu a mers bine ... mai încearcă odată!')
+            );
+        }
       }
     } else {
       this.currentSong = -1;
