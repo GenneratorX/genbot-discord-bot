@@ -84,27 +84,15 @@ export class MusicPlayer {
               this.playSong(this.songList.length - 1);
             }
           } else {
-            this.currentTextChannel.send(
-              new Discord.MessageEmbed()
-                .setColor('#FF0000')
-                .setTitle('Videoclipul introdus nu este disponibil pentru redare! Încearcă alt link.')
-            );
+            this.sendSimpleMessage('Videoclipul introdus nu este disponibil pentru redare! Încearcă alt link', 'error');
           }
         })
         .catch(error => {
           console.log(error);
-          this.currentTextChannel.send(
-            new Discord.MessageEmbed()
-              .setColor('#FF0000')
-              .setTitle('Ceva nu a mers bine ... mai încearcă odată!')
-          );
+          this.sendSimpleMessage('Ceva nu a mers bine ... mai încearcă odată!', 'error');
         });
     } else {
-      this.currentTextChannel.send(
-        new Discord.MessageEmbed()
-          .setColor('#FF0000')
-          .setTitle('Link-ul introdus este invalid!')
-      );
+      this.sendSimpleMessage('Link-ul introdus este invalid!', 'error');
     }
   }
 
@@ -131,24 +119,12 @@ export class MusicPlayer {
           this.currentSong--;
         }
 
-        this.currentTextChannel.send(
-          new Discord.MessageEmbed()
-            .setColor('#FF0000')
-            .setTitle(`Am șters melodia aflată pe poziția ${songPosition + 1}`)
-        );
+        this.sendSimpleMessage(`Am șters melodia aflată pe poziția ${songPosition + 1}`, 'notification');
       } else {
-        this.currentTextChannel.send(
-          new Discord.MessageEmbed()
-            .setColor('#FF0000')
-            .setTitle(`Poziția **${songPosition + 1}** nu există!`)
-        );
+        this.sendSimpleMessage(`Poziția **${songPosition + 1}** nu există!`, 'error');
       }
     } else {
-      this.currentTextChannel.send(
-        new Discord.MessageEmbed()
-          .setColor('#FF0000')
-          .setTitle(`Poziția trebuie să fie un număr întreg pozitiv!`)
-      );
+      this.sendSimpleMessage('Poziția trebuie să fie un număr întreg pozitiv!', 'error');
     }
   }
 
@@ -176,11 +152,7 @@ export class MusicPlayer {
           this.voiceConnection.on('error', error => {
             console.log(error);
             this.isPlaying = false;
-            this.currentTextChannel.send(
-              new Discord.MessageEmbed()
-                .setColor('#FF0000')
-                .setTitle('Am avut o problemă la conectare ... mai încearcă odată!')
-            );
+            this.sendSimpleMessage('Am avut o problemă la conectare ... mai încearcă odată!', 'error');
           });
         }
 
@@ -221,36 +193,21 @@ export class MusicPlayer {
           this.isPlaying = false;
           this.playSong(songPosition + 1);
 
-          this.currentTextChannel.send(
-            new Discord.MessageEmbed()
-              .setColor('#FF0000')
-              .setTitle('Ceva nu a mers bine la redarea melodiei ... trec la următoarea!')
-          );
+          this.sendSimpleMessage('Ceva nu a mers bine la redarea melodiei ... trec la următoarea!', 'error');
         });
       } catch (error) {
         console.log(error);
         switch (error.message) {
           case 'You do not have permission to join this voice channel.':
-            this.currentTextChannel.send(
-              new Discord.MessageEmbed()
-                .setColor('#FF0000')
-                .setTitle('Nu am permisiunile necesare pentru a intra în camera de voce!')
-            );
+            this.sendSimpleMessage('Nu am permisiunile necesare pentru a intra în camera de voce!', 'error');
             break;
           case 'Connection not established within 15 seconds.':
-            this.currentTextChannel.send(
-              new Discord.MessageEmbed()
-                .setColor('#FF0000')
-                .setTitle('Am încercat să intru în camera de voce însă nu am reușit. O să încerc să intru iar imediat!')
+            this.sendSimpleMessage(
+              'Am încercat să intru în camera de voce însă nu am reușit. O să încerc să intru iar imediat!', 'error'
             );
             this.playSong(songPosition);
             break;
-          default:
-            this.currentTextChannel.send(
-              new Discord.MessageEmbed()
-                .setColor('#FF0000')
-                .setTitle('Ceva nu a mers bine ... mai încearcă odată!')
-            );
+          default: this.sendSimpleMessage('Ceva nu a mers bine ... mai încearcă odată!', 'error');
         }
       }
     } else {
@@ -259,11 +216,7 @@ export class MusicPlayer {
         if (this.voiceConnection !== undefined) {
           this.voiceConnection.disconnect();
         }
-        this.currentTextChannel.send(
-          new Discord.MessageEmbed()
-            .setColor('#FFFF00')
-            .setTitle('Am stat degeaba 5 minute ... așa că am ieșit!')
-        );
+        this.sendSimpleMessage('Am stat degeaba 5 minute ... așa că am ieșit!', 'notification');
       }, 300000); // 5 minutes
     }
   }
@@ -275,11 +228,7 @@ export class MusicPlayer {
     if (this.isPlaying === true && this.streamDispatcher !== undefined) {
       this.streamDispatcher.pause(true);
       this.isPlaying = false;
-      this.currentTextChannel.send(
-        new Discord.MessageEmbed()
-          .setColor('#FFFF00')
-          .setTitle('Opresc melodia imediat!')
-      );
+      this.sendSimpleMessage('Opresc melodia imediat!', 'notification');
     }
   }
 
@@ -290,11 +239,7 @@ export class MusicPlayer {
     if (this.isPlaying === false && this.streamDispatcher !== undefined && this.streamDispatcher.destroyed === false) {
       this.streamDispatcher.resume();
       this.isPlaying = true;
-      this.currentTextChannel.send(
-        new Discord.MessageEmbed()
-          .setColor('#FFFF00')
-          .setTitle('Continuăm de unde am rămas!')
-      );
+      this.sendSimpleMessage('Continuăm de unde am rămas!', 'notification');
     }
   }
 
@@ -304,11 +249,7 @@ export class MusicPlayer {
   skipSong() {
     if (this.currentSong !== -1 && this.streamDispatcher !== undefined) {
       this.streamDispatcher.end();
-      this.currentTextChannel.send(
-        new Discord.MessageEmbed()
-          .setColor('#FFFF00')
-          .setTitle('Trecem la următoarea melodie...')
-      );
+      this.sendSimpleMessage('Trecem la următoarea melodie...', 'notification');
     }
   }
 
@@ -344,11 +285,7 @@ export class MusicPlayer {
           )
       );
     } else {
-      this.currentTextChannel.send(
-        new Discord.MessageEmbed()
-          .setColor('#FFFF00')
-          .setTitle('Lista de redare este goală!')
-      );
+      this.sendSimpleMessage('Lista de redare este goală!', 'notification');
     }
   }
 
@@ -376,6 +313,27 @@ export class MusicPlayer {
     }
 
     return videoInfo;
+  }
+
+  /**
+   * Sends a message to the current text channel
+   * @param message Message to send
+   * @param type Message type
+   */
+  private sendSimpleMessage(message: string, type?: 'error' | 'notification' | 'success') {
+    let messageColor;
+
+    switch (type) {
+      case 'error': messageColor = '#FF0000'; break;
+      case 'notification': messageColor = '#FFFF00'; break;
+      default: messageColor = '#00FF00';
+    }
+
+    this.currentTextChannel.send(
+      new Discord.MessageEmbed()
+        .setColor(messageColor)
+        .setTitle(message)
+    );
   }
 
   /**
