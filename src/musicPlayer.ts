@@ -84,12 +84,19 @@ export class MusicPlayer {
               this.playSong(this.songList.length - 1);
             }
           } else {
-            this.sendSimpleMessage('Videoclipul introdus nu este disponibil pentru redare! Încearcă alt link', 'error');
+            this.sendSimpleMessage(
+              'Videoclipul introdus nu este disponibil pentru redare! Încearcă alt link.', 'error'
+            );
           }
         })
         .catch(error => {
           console.log(error);
-          this.sendSimpleMessage('Ceva nu a mers bine ... mai încearcă odată!', 'error');
+          switch (error.message) {
+            case 'This is a private video. Please sign in to verify that you may see it.':
+              this.sendSimpleMessage('Videoclipul introdus este privat! Încearcă alt link.', 'error');
+              break;
+            default: this.sendSimpleMessage('Ceva nu a mers bine ... mai încearcă odată!', 'error');
+          }
         });
     } else {
       this.sendSimpleMessage('Link-ul introdus este invalid!', 'error');
