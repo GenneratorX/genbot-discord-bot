@@ -56,11 +56,11 @@ export class MusicPlayer {
       ytdl.getInfo(youtubeLink)
         .then(videoInfo => {
           if (videoInfo.player_response.playabilityStatus.status === 'OK') {
+            videoInfo = this.cleanYtdlVideoInfoObject(videoInfo);
             this.songList.push({
               ytdlVideoInfo: videoInfo,
               addedBy: addedBy,
             });
-            console.log(videoInfo);
             this.currentTextChannel.send(
               new Discord.MessageEmbed()
                 .setColor('#00FF00')
@@ -87,7 +87,7 @@ export class MusicPlayer {
             this.currentTextChannel.send(
               new Discord.MessageEmbed()
                 .setColor('#FF0000')
-                .setTitle('Videoclipul nu este disponibil pentru redare!')
+                .setTitle('Videoclipul introdus nu este disponibil pentru redare! Încearcă alt link.')
             );
           }
         })
@@ -190,7 +190,8 @@ export class MusicPlayer {
         );
 
         this.streamDispatcher.on('start', () => {
-          console.log(`  [SONG START] ${this.songList[songPosition].ytdlVideoInfo.video_id}`);
+          console.log(`  [SONG START] ${this.songList[songPosition].ytdlVideoInfo.video_id} ` +
+            `[AUDIO BITRATE=${this.songList[songPosition].ytdlVideoInfo.formats[0].audioBitrate}]`);
           this.isPlaying = true;
           this.currentTextChannel.send(
             new Discord.MessageEmbed()
@@ -331,6 +332,32 @@ export class MusicPlayer {
           .setTitle('Lista de redare este goală!')
       );
     }
+  }
+
+  /**
+   * Removes unnecessary data from the YTDL video info object
+   * @param videoInfo YTDL video info object
+   * @returns Clean YTDL video info object
+   */
+  private cleanYtdlVideoInfoObject(videoInfo: ytdl.videoInfo) {
+    /**
+     * Remove all formats but the highest quality one
+     */
+    const highestQualityAudioFormat =
+      ytdl.chooseFormat(videoInfo.formats, { filter: 'audioonly', quality: 'highestaudio' });
+    while (videoInfo.formats.length > 0) {
+      videoInfo.formats.pop();
+    }
+    videoInfo.formats.push(highestQualityAudioFormat);
+
+    /**
+     * Remove related videos
+     */
+    while (videoInfo.related_videos.length > 0) {
+      videoInfo.related_videos.pop();
+    }
+
+    return videoInfo;
   }
 
   /**
