@@ -55,31 +55,40 @@ export class MusicPlayer {
     if (ytdl.validateURL(youtubeLink) === true) {
       ytdl.getInfo(youtubeLink)
         .then(videoInfo => {
-          this.songList.push({
-            ytdlVideoInfo: videoInfo,
-            addedBy: addedBy,
-          });
-          this.currentTextChannel.send(
-            new Discord.MessageEmbed()
-              .setColor('#00FF00')
-              .setAuthor('Adăugare melodie')
-              .setTitle(Discord.Util.escapeMarkdown(videoInfo.title))
-              .addFields({
-                name: 'Adăugat de',
-                value: `<@${addedBy}>`,
-                inline: true,
-              }, {
-                name: 'Durata',
-                value: prettyPrintDuration(videoInfo.player_response.videoDetails.lengthSeconds),
-                inline: true,
-              }, {
-                name: 'Poziție',
-                value: this.songList.length,
-                inline: true,
-              })
-          );
-          if (this.currentSong === -1) {
-            this.playSong(this.songList.length - 1);
+          if (videoInfo.player_response.playabilityStatus.status === 'OK') {
+            this.songList.push({
+              ytdlVideoInfo: videoInfo,
+              addedBy: addedBy,
+            });
+            console.log(videoInfo);
+            this.currentTextChannel.send(
+              new Discord.MessageEmbed()
+                .setColor('#00FF00')
+                .setAuthor('Adăugare melodie')
+                .setTitle(Discord.Util.escapeMarkdown(videoInfo.title))
+                .addFields({
+                  name: 'Adăugat de',
+                  value: `<@${addedBy}>`,
+                  inline: true,
+                }, {
+                  name: 'Durata',
+                  value: prettyPrintDuration(videoInfo.player_response.videoDetails.lengthSeconds),
+                  inline: true,
+                }, {
+                  name: 'Poziție',
+                  value: this.songList.length,
+                  inline: true,
+                })
+            );
+            if (this.currentSong === -1) {
+              this.playSong(this.songList.length - 1);
+            }
+          } else {
+            this.currentTextChannel.send(
+              new Discord.MessageEmbed()
+                .setColor('#FF0000')
+                .setTitle('Videoclipul nu este disponibil pentru redare!')
+            );
           }
         })
         .catch(error => {
