@@ -257,33 +257,47 @@ export class MusicPlayer {
    * Displays the song queue in a pretty format
    */
   displaySongQueue() {
+    const MAX_DESCRIPTION_LENGTH = 2048;
     if (this.songList.length > 0) {
-      let songQueue = '';
+      let songQueueEmbed = new Discord.MessageEmbed()
+        .setColor('#00FF00')
+        .setTitle('Listă de redare');
+
       for (let i = 0; i < this.songList.length; i++) {
+        let newSong = '';
         if (i === this.currentSong) {
-          songQueue +=
-            `**==================== [ MELODIA CURENTĂ ] ====================**\n` +
+          newSong =
+            `\n**==================== [ MELODIA CURENTĂ ] ====================**\n` +
             `**\`${i + 1}.\` ${Discord.Util.escapeMarkdown(this.songList[i].ytdlVideoInfo.title)} ` +
             `[${prettyPrintDuration(this.songList[i].ytdlVideoInfo.player_response.videoDetails.lengthSeconds)}] ` +
             `[<@${this.songList[i].addedBy}>]**\n` +
-            `**==========================================================**\n`;
+            `**==========================================================**\n\n`;
         } else {
-          songQueue +=
+          newSong =
             `\`${i + 1}.\` ${Discord.Util.escapeMarkdown(this.songList[i].ytdlVideoInfo.title)} ` +
             `**[${prettyPrintDuration(this.songList[i].ytdlVideoInfo.player_response.videoDetails.lengthSeconds)}] ` +
             `[<@${this.songList[i].addedBy}>]**\n`;
         }
+
+
+        if (songQueueEmbed.description !== undefined) {
+          if (songQueueEmbed.description.length + newSong.length <= MAX_DESCRIPTION_LENGTH) {
+            songQueueEmbed.setDescription(songQueueEmbed.description + newSong);
+          } else {
+            this.currentTextChannel.send(songQueueEmbed);
+            songQueueEmbed = new Discord.MessageEmbed()
+              .setColor('#00FF00')
+              .setDescription(newSong);
+          }
+        } else {
+          songQueueEmbed.setDescription(newSong);
+        }
       }
       this.currentTextChannel.send(
-        new Discord.MessageEmbed()
-          .setColor('#00FF00')
-          .setTitle('Listă de redare')
-          .setDescription(songQueue)
-          .setFooter(
-            `Număr melodii: ${this.songList.length} | ` +
-            `Durată: ${prettyPrintDuration(this.songQueueDuration)}`
-          )
-      );
+        songQueueEmbed.setFooter(
+          `Număr melodii: ${this.songList.length} | ` +
+          `Durată: ${prettyPrintDuration(this.songQueueDuration)}`
+        ));
     } else {
       this.sendSimpleMessage('Lista de redare este goală!', 'notification');
     }
