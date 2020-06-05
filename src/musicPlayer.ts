@@ -65,14 +65,14 @@ export class MusicPlayer {
               new Discord.MessageEmbed()
                 .setColor('#00FF00')
                 .setAuthor('Adăugare melodie')
-                .setTitle(Discord.Util.escapeMarkdown(videoInfo.title))
+                .setTitle(Discord.Util.escapeMarkdown(videoInfo.videoDetails.title))
                 .addFields({
                   name: 'Adăugat de',
                   value: `<@${addedBy}>`,
                   inline: true,
                 }, {
                   name: 'Durata',
-                  value: prettyPrintDuration(videoInfo.player_response.videoDetails.lengthSeconds),
+                  value: prettyPrintDuration(parseInt(videoInfo.videoDetails.lengthSeconds, 10)),
                   inline: true,
                 }, {
                   name: 'Poziție',
@@ -90,12 +90,13 @@ export class MusicPlayer {
           }
         })
         .catch(error => {
-          console.log(error);
           switch (error.message) {
             case 'This is a private video. Please sign in to verify that you may see it.':
               this.sendSimpleMessage('Videoclipul introdus este privat! Încearcă alt link.', 'error');
               break;
-            default: this.sendSimpleMessage('Ceva nu a mers bine ... mai încearcă odată!', 'error');
+            default:
+              console.log(error);
+              this.sendSimpleMessage('Ceva nu a mers bine ... mai încearcă odată!', 'error');
           }
         });
     } else {
@@ -169,21 +170,26 @@ export class MusicPlayer {
         );
 
         this.streamDispatcher.on('start', () => {
-          console.log(`  [SONG START] ${this.songList[songPosition].ytdlVideoInfo.video_id} ` +
+          console.log(`  [SONG START] ${this.songList[songPosition].ytdlVideoInfo.videoDetails.videoId} ` +
             `[AUDIO BITRATE=${this.songList[songPosition].ytdlVideoInfo.formats[0].audioBitrate}]`);
           this.isPlaying = true;
           this.currentTextChannel.send(
             new Discord.MessageEmbed()
               .setColor('#00FF00')
               .setAuthor('În curs de redare...')
-              .setTitle(`🎵🎵 ${Discord.Util.escapeMarkdown(this.songList[songPosition].ytdlVideoInfo.title)} 🎵🎵`)
+              .setTitle(
+                '🎵🎵 ' +
+                Discord.Util.escapeMarkdown(this.songList[songPosition].ytdlVideoInfo.videoDetails.title) +
+                '🎵🎵')
               .addFields({
                 name: 'Adăugat de',
                 value: `<@${this.songList[songPosition].addedBy}>`,
                 inline: true,
               }, {
                 name: 'Link YouTube',
-                value: `https://www.youtube.com/watch?v=${this.songList[songPosition].ytdlVideoInfo.video_id}`,
+                value:
+                  'https://www.youtube.com/watch?v=' +
+                  this.songList[songPosition].ytdlVideoInfo.videoDetails.videoId,
                 inline: true,
               })
           );
@@ -275,14 +281,14 @@ export class MusicPlayer {
         if (i === this.currentSong) {
           newSong =
             `\n**==================== [ MELODIA CURENTĂ ] ====================**\n` +
-            `**\`${i + 1}.\` ${Discord.Util.escapeMarkdown(this.songList[i].ytdlVideoInfo.title)} ` +
-            `[${prettyPrintDuration(this.songList[i].ytdlVideoInfo.player_response.videoDetails.lengthSeconds)}] ` +
+            `**\`${i + 1}.\` ${Discord.Util.escapeMarkdown(this.songList[i].ytdlVideoInfo.videoDetails.title)} ` +
+            `[${prettyPrintDuration(parseInt(this.songList[i].ytdlVideoInfo.videoDetails.lengthSeconds, 10))}] ` +
             `[<@${this.songList[i].addedBy}>]**\n` +
             `**==========================================================**\n\n`;
         } else {
           newSong =
-            `\`${i + 1}.\` ${Discord.Util.escapeMarkdown(this.songList[i].ytdlVideoInfo.title)} ` +
-            `**[${prettyPrintDuration(this.songList[i].ytdlVideoInfo.player_response.videoDetails.lengthSeconds)}] ` +
+            `\`${i + 1}.\` ${Discord.Util.escapeMarkdown(this.songList[i].ytdlVideoInfo.videoDetails.title)} ` +
+            `**[${prettyPrintDuration(parseInt(this.songList[i].ytdlVideoInfo.videoDetails.lengthSeconds, 10))}] ` +
             `[<@${this.songList[i].addedBy}>]**\n`;
         }
 
@@ -377,7 +383,7 @@ export class MusicPlayer {
   get songQueueDuration() {
     let duration = 0;
     for (let i = 0; i < this.songList.length; i++) {
-      duration += parseInt(this.songList[i].ytdlVideoInfo.length_seconds);
+      duration += parseInt(this.songList[i].ytdlVideoInfo.videoDetails.lengthSeconds, 10);
     }
     return duration;
   }
@@ -389,7 +395,7 @@ export class MusicPlayer {
  * @returns Pretty time
  */
 function prettyPrintDuration(duration: number) {
-  let hours = Math.floor(duration / 3600).toString();
+  const hours = Math.floor(duration / 3600).toString();
   let minutes = Math.floor(duration % 3600 / 60).toString();
   let seconds = (duration % 60).toString();
 

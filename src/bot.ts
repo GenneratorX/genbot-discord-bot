@@ -120,7 +120,7 @@ function commandQueue() {
  */
 function commandRemove(param: string) {
   if (musicPlayer !== undefined) {
-    musicPlayer.removeSong(parseInt(param) - 1);
+    musicPlayer.removeSong(parseInt(param, 10) - 1);
   }
 }
 
