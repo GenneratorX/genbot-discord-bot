@@ -56,37 +56,43 @@ export class MusicPlayer {
     if (ytdl.validateURL(youtubeLink) === true) {
       ytdl.getInfo(youtubeLink)
         .then(videoInfo => {
-          if (videoInfo.player_response.playabilityStatus.status === 'OK') {
-            videoInfo = this.cleanYtdlVideoInfoObject(videoInfo);
-            this.songList.push({
-              ytdlVideoInfo: videoInfo,
-              addedBy: addedBy,
-            });
-            this.currentTextChannel.send(
-              new Discord.MessageEmbed()
-                .setColor('#00FF00')
-                .setAuthor('Adăugare melodie')
-                .setTitle(Discord.Util.escapeMarkdown(videoInfo.videoDetails.title))
-                .addFields({
-                  name: 'Adăugat de',
-                  value: `<@${addedBy}>`,
-                  inline: true,
-                }, {
-                  name: 'Durata',
-                  value: prettyPrintDuration(parseInt(videoInfo.videoDetails.lengthSeconds, 10)),
-                  inline: true,
-                }, {
-                  name: 'Poziție',
-                  value: this.songList.length,
-                  inline: true,
-                })
-            );
-            if (this.currentSong === -1) {
-              this.playSong(this.songList.length - 1);
+          if (this.isInSongList(videoInfo.videoDetails.videoId) === false) {
+            if (videoInfo.player_response.playabilityStatus.status === 'OK') {
+              videoInfo = this.cleanYtdlVideoInfoObject(videoInfo);
+              this.songList.push({
+                ytdlVideoInfo: videoInfo,
+                addedBy: addedBy,
+              });
+              this.currentTextChannel.send(
+                new Discord.MessageEmbed()
+                  .setColor('#00FF00')
+                  .setAuthor('Adăugare melodie')
+                  .setTitle(Discord.Util.escapeMarkdown(videoInfo.videoDetails.title))
+                  .addFields({
+                    name: 'Adăugat de',
+                    value: `<@${addedBy}>`,
+                    inline: true,
+                  }, {
+                    name: 'Durata',
+                    value: prettyPrintDuration(parseInt(videoInfo.videoDetails.lengthSeconds, 10)),
+                    inline: true,
+                  }, {
+                    name: 'Poziție',
+                    value: this.songList.length,
+                    inline: true,
+                  })
+              );
+              if (this.currentSong === -1) {
+                this.playSong(this.songList.length - 1);
+              }
+            } else {
+              this.sendSimpleMessage(
+                'Videoclipul introdus nu este disponibil pentru redare! Încearcă alt link.', 'error'
+              );
             }
           } else {
             this.sendSimpleMessage(
-              'Videoclipul introdus nu este disponibil pentru redare! Încearcă alt link.', 'error'
+              'Videoclipul introdus există deja în lista de redare!', 'error'
             );
           }
         })
@@ -514,6 +520,19 @@ export class MusicPlayer {
         .setColor(messageColor)
         .setDescription(message)
     );
+  }
+
+  /**
+   * Checks if a song is in the song list
+   * @param videoId YouTube video ID
+   */
+  private isInSongList(videoId: string) {
+    for (let i = 0; i < this.songList.length; i++) {
+      if (this.songList[i].ytdlVideoInfo.videoDetails.videoId === videoId) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
