@@ -4,6 +4,7 @@ import Discord = require('discord.js');
 import ytdl = require('ytdl-core');
 
 import env = require('./env');
+import db = require('./db');
 
 export class MusicPlayer {
 
@@ -313,6 +314,158 @@ export class MusicPlayer {
         ));
     } else {
       this.sendSimpleMessage('Lista de redare este goală!', 'notification');
+    }
+  }
+
+  /**
+   * Saves the playlist to the database
+   * @param playlistName Playlist name
+   * @param playlistCreator Playlist creator id
+   */
+  async savePlaylist(playlistName: string, playlistCreator: string) {
+    if (this.songList.length > 0) {
+      playlistName = playlistName.trim().replace(/\s+/g, ' ');
+      if (playlistName.length > 2 && playlistName.length < 51) {
+        const query = await db.query(
+          'SELECT playlist_name FROM playlist WHERE LOWER(playlist_name) = LOWER($1)', [playlistName]
+        );
+        if (query.length === 0) {
+          const playlistId: string = (await db.query(
+            'INSERT INTO playlist VALUES (DEFAULT, $1, $2, DEFAULT) RETURNING playlist_id;',
+            [playlistName, playlistCreator]
+          ))[0].playlist_id;
+
+          let insertQuery = 'INSERT INTO playlist_song VALUES ';
+          const insertParameters: string[] = [];
+          let j = 1;
+
+          for (let i = 0; i < this.songList.length; i++) {
+            insertQuery += `($${j++},$${j++},$${j++}),`;
+            insertParameters.push(playlistId);
+            insertParameters.push(this.songList[i].ytdlVideoInfo.videoDetails.videoId);
+            insertParameters.push(this.songList[i].addedBy);
+          }
+
+          insertQuery = insertQuery.slice(0, -1) + ';';
+          await db.query(insertQuery, insertParameters);
+
+          this.sendSimpleMessage(`Am salvat lista de redare cu numele '${playlistName}'.`, 'success');
+
+        } else {
+          this.sendSimpleMessage('Există deja o listă de redare cu acest nume. Folosește alt nume!', 'error');
+        }
+      } else {
+        this.sendSimpleMessage('Numele listei de redare trebuie să conțină între 3 și 50 caractere!', 'error');
+      }
+    } else {
+      this.sendSimpleMessage(
+        'Nu cred că pot crea o listă de redare fără melodii. Adaugă una și după mai vorbim!', 'error'
+      );
+    }
+  }
+
+  /**
+   * Loads a playlist from the database
+   * @param playlistName Playlist name
+   */
+  async loadPlaylist(playlistName: string) {
+    playlistName = playlistName.trim().replace(/\s+/g, ' ');
+    if (playlistName.length > 0) {
+      const searchQuery = await db.query(
+        'SELECT playlist_id, playlist_name FROM playlist WHERE playlist_name ILIKE $1;', [`%${playlistName}%`]
+      );
+      if (searchQuery.length === 1) {
+        this.sendSimpleMessage(
+          `Am găsit o listă de redare cu numele '${searchQuery[0].playlist_name}'. ` +
+          'Așteaptă un moment până încarc toate melodiile...',
+          'notification'
+        );
+        while (this.songList.length > 0) {
+          this.songList.pop();
+        }
+        this.loadSongsFromPlaylist(searchQuery[0].playlist_id);
+      } else {
+        if (searchQuery.length > 1) {
+          this.sendSimpleMessage('Există mai multe liste de redare care conțin numele introdus!', 'notification');
+        } else {
+          this.sendSimpleMessage('Nu există o listă de redare cu acel nume!', 'error');
+        }
+      }
+    } else {
+      this.sendSimpleMessage('Introdu și tu măcar un caracter, ca să știu ce să caut!', 'error');
+    }
+  }
+
+  /**
+   * Displays the playlists stored in the database
+   */
+  async showPlaylists() {
+    const searchQuery = await db.query('SELECT playlist_name, created_by FROM playlist;');
+    if (searchQuery.length > 0) {
+      const playlistsEmbed = new Discord.MessageEmbed()
+        .setColor('#00FF00')
+        .setTitle('Liste de redare');
+
+      let playlists = '';
+      for (let i = 0; i < searchQuery.length; i++) {
+        playlists +=
+          `\`${i + 1}.\` ${Discord.Util.escapeMarkdown(searchQuery[i].playlist_name)} ` +
+          `**[<@${searchQuery[i].created_by}>]**\n`;
+      }
+
+      playlistsEmbed.setDescription(playlists);
+      this.currentTextChannel.send(playlistsEmbed);
+    } else {
+      this.sendSimpleMessage('Nu există liste de redare salvate!', 'notification');
+    }
+  }
+
+  /**
+   * Loads the songs of a playlist stored in the database
+   * @param playlistId Playlist ID
+   */
+  async loadSongsFromPlaylist(playlistId: string) {
+    const playlistQuery = await db.query(
+      'SELECT video_id, added_by FROM playlist_song WHERE playlist_id = $1;', [playlistId]
+    );
+
+    const videoInfo: Promise<ytdl.videoInfo>[] = [];
+    for (let i = 0; i < playlistQuery.length; i++) {
+      videoInfo.push(ytdl.getInfo(`https://www.youtube.com/watch?v=${playlistQuery[i].video_id}`));
+    }
+
+    const allVideoInfo = await Promise.allSettled(videoInfo);
+    let rejectedVideos = 0;
+    for (let i = 0; i < allVideoInfo.length; i++) {
+      if (allVideoInfo[i].status === 'fulfilled') {
+        const cleanVideoInfo =
+          this.cleanYtdlVideoInfoObject((allVideoInfo[i] as PromiseFulfilledResult<ytdl.videoInfo>).value);
+
+        if (cleanVideoInfo.player_response.playabilityStatus.status === 'OK') {
+          this.songList.push({
+            ytdlVideoInfo: cleanVideoInfo,
+            addedBy: playlistQuery[i].added_by,
+          });
+        } else {
+          rejectedVideos++;
+        }
+      } else {
+        rejectedVideos++;
+      }
+    }
+
+    if (rejectedVideos === 0) {
+      this.sendSimpleMessage('Lista de redare a fost încărcată în totalitate!', 'success');
+      this.playSong(0);
+    } else {
+      if (rejectedVideos < allVideoInfo.length) {
+        this.sendSimpleMessage(
+          `Am încărcat o parte din lista de redare. ${rejectedVideos} melodii nu au putut fi încărcate!`, 'notification'
+        );
+        this.playSong(0);
+      } else {
+        this.sendSimpleMessage('Nu am putut să încarc nicio melodie din lista de redare!', 'error');
+      }
     }
   }
 

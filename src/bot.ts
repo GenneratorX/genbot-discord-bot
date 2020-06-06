@@ -1,9 +1,13 @@
 'use strict';
 
 import Discord = require('discord.js');
+
 import env = require('./env');
+import db = require('./db');
 import { MusicPlayer } from './musicPlayer';
+
 const client = new Discord.Client();
+const textChannels: string[] = [];
 
 let musicPlayer: MusicPlayer;
 
@@ -13,6 +17,17 @@ client.on('ready', () => {
     client.user.setStatus('online');
     client.user.setActivity('your requests!', { type: 'LISTENING' });
   }
+
+  db.query('SELECT text_channel_id FROM text_channel;')
+    .then(query => {
+      for (let i = 0; i < query.length; i++) {
+        textChannels.push(query[i].text_channel_id);
+      }
+    })
+    .catch(error => {
+      console.log(error);
+      process.exit(1);
+    });
 });
 
 client.on('error', error => {
@@ -20,38 +35,41 @@ client.on('error', error => {
 });
 
 client.on('message', msg => {
-  if ((msg.channel.id !== '363672801451966464' && msg.channel.id !== '363106595132932098') ||
-    msg.author.bot === true ||
-    msg.content.startsWith(env.BOT_PREFIX) === false) return;
+  if (
+    textChannels.includes(msg.channel.id) === true &&
+    msg.author.bot === false &&
+    msg.content.startsWith(env.BOT_PREFIX) === true
+  ) {
+    const split = msg.content.split(' ');
+    const command = (split.shift() as string).substring(1);
+    const param = split.join(' ');
 
-  const split = msg.content.split(' ');
-  const command = (split.shift() as string).substring(1);
-  const param = split.join(' ');
+    console.log(`[COMMAND L=${command.length}] ${command} [PARAM L=${param.length}] ${param}`);
 
-  console.log(`[COMMAND L=${command.length}] ${command} [PARAM L=${param.length}] ${param}`);
-
-  switch (command) {
-    case 'play': commandPlayPause(msg, param, command); break;
-    case 'pause': commandPlayPause(msg, param, command); break;
-    case 'p': commandPlayPause(msg, param, command); break;
-    case 'skip': commandSkip(); break;
-    case 's': commandSkip(); break;
-    case 'queue': commandQueue(); break;
-    case 'q': commandQueue(); break;
-    case 'remove': commandRemove(param); break;
-    case 'r': commandRemove(param); break;
-    case 'about': commandAbout(msg); break;
-    case 'despre': commandAbout(msg); break;
-    case 'help': commandHelp(msg); break;
-    case 'h': commandHelp(msg); break;
-    default:
-      msg.channel.send(
-        new Discord.MessageEmbed()
-          .setColor('#FF0000')
-          .setDescription(`Nu am auzit de comanda aia. ` +
-            `Scrie **${env.BOT_PREFIX}help** pentru a vizualiza lista de comenzi.`)
-      );
-      break;
+    switch (command) {
+      case 'play': commandPlayPause(msg, param, command); break;
+      case 'pause': commandPlayPause(msg, param, command); break;
+      case 'p': commandPlayPause(msg, param, command); break;
+      case 'skip': commandSkip(); break;
+      case 's': commandSkip(); break;
+      case 'queue': commandQueue(); break;
+      case 'q': commandQueue(); break;
+      case 'remove': commandRemove(param); break;
+      case 'r': commandRemove(param); break;
+      case 'playlist': commandPlaylist(msg, param); break;
+      case 'about': commandAbout(msg); break;
+      case 'despre': commandAbout(msg); break;
+      case 'help': commandHelp(msg); break;
+      case 'h': commandHelp(msg); break;
+      default:
+        msg.channel.send(
+          new Discord.MessageEmbed()
+            .setColor('#FF0000')
+            .setDescription(`Nu am auzit de comanda aia. ` +
+              `Scrie **${env.BOT_PREFIX}help** pentru a vizualiza lista de comenzi.`)
+        );
+        break;
+    }
   }
 });
 
@@ -121,6 +139,32 @@ function commandQueue() {
 function commandRemove(param: string) {
   if (musicPlayer !== undefined) {
     musicPlayer.removeSong(parseInt(param, 10) - 1);
+  }
+}
+
+/**
+ * Saves a playlist to the database
+ * @param msg Discord message object
+ * @param param Message command parameter
+ */
+function commandPlaylist(msg: Discord.Message, param: string) {
+  if (musicPlayer !== undefined) {
+    const split = param.split(' ');
+    const command = split.shift();
+    const parameter = split.join(' ');
+    switch (command) {
+      case 'save': musicPlayer.savePlaylist(parameter, msg.author.id); break;
+      case 'load': musicPlayer.loadPlaylist(parameter); break;
+      case '': musicPlayer.showPlaylists(); break;
+      default:
+        msg.channel.send(
+          new Discord.MessageEmbed()
+            .setColor('#FF0000')
+            .setDescription(`Nu am auzit de comanda aia. ` +
+              `Scrie **${env.BOT_PREFIX}help playlist** pentru a vizualiza lista de comenzi.`)
+        );
+        break;
+    }
   }
 }
 
