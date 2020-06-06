@@ -512,7 +512,7 @@ export class MusicPlayer {
     this.currentTextChannel.send(
       new Discord.MessageEmbed()
         .setColor(messageColor)
-        .setTitle(message)
+        .setDescription(message)
     );
   }
 

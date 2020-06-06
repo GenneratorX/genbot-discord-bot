@@ -18,7 +18,6 @@
   "homepage": "https://github.com/GenneratorX/genbot-discord-bot#readme",
   "dependencies": {
     "@discordjs/opus": "^0.3.2",
-    "@types/pg": "^7.14.3",
     "bufferutil": "^4.0.1",
     "discord.js": "^12.2.0",
     "erlpack": "github:discordapp/erlpack",
@@ -31,6 +30,7 @@
   },
   "devDependencies": {
     "@types/node": "^14.0.11",
+    "@types/pg": "^7.14.3",
     "@types/ws": "^7.2.5",
     "@typescript-eslint/eslint-plugin": "^3.1.0",
     "@typescript-eslint/parser": "^3.1.0",
