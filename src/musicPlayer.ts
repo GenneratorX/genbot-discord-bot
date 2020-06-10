@@ -153,7 +153,7 @@ export class MusicPlayer {
       clearTimeout(this.disconnectTimer);
       this.currentSong = songPosition;
       try {
-        if (this.voiceConnection === undefined) {
+        if (this.voiceConnection === undefined || this.voiceConnection.status === 4) {
           console.log(`[CREATED VOICE CONNECTION]`);
           this.voiceConnection = await this.currentVoiceChannel.join();
 
@@ -163,6 +163,7 @@ export class MusicPlayer {
             while (this.songList.length > 0) {
               this.songList.pop();
             }
+            this.currentSong = -1;
           });
 
           this.voiceConnection.on('error', error => {
