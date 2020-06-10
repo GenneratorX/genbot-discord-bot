@@ -150,20 +150,14 @@ function commandRemove(param: string) {
 function commandPlaylist(msg: Discord.Message, param: string) {
   if (musicPlayer !== undefined) {
     const split = param.split(' ');
-    const command = split.shift();
+    const command = split.shift() as string;
     const parameter = split.join(' ');
     switch (command) {
       case 'save': musicPlayer.savePlaylist(parameter, msg.author.id); break;
       case 'load': musicPlayer.loadPlaylist(parameter); break;
+      case 'delete': musicPlayer.removePlaylist(parameter); break;
       case '': musicPlayer.showPlaylists(); break;
-      default:
-        msg.channel.send(
-          new Discord.MessageEmbed()
-            .setColor('#FF0000')
-            .setDescription(`Nu am auzit de comanda aia. ` +
-              `Scrie **${env.BOT_PREFIX}help playlist** pentru a vizualiza lista de comenzi.`)
-        );
-        break;
+      default: musicPlayer.showPlaylistSongs(command);
     }
   }
 }
@@ -206,12 +200,16 @@ function commandHelp(msg: Discord.Message) {
     new Discord.MessageEmbed()
       .setColor('#0000FF')
       .setTitle('Pagină comenzi bot')
+      .setDescription('Funcționalitățile bot-ului sunt descrise prin combinații *comandă*-*parametrii*.\n' +
+        ' * Parametrii obligatorii sunt marcați sub forma ** *<parametru>* **\n' +
+        ' * Parametrii opționali sunt marcați sub forma ** *[parametru]* **'
+      )
       .addFields({
-        name: `\`1.\` **${env.BOT_PREFIX}play / ${env.BOT_PREFIX}p [link YouTube]**`,
+        name: `\`1.\` **${env.BOT_PREFIX}play / ${env.BOT_PREFIX}p *[link YouTube]* **`,
         value: 'Redă sunetul din videoclipul introdus sau pornește redarea sunetului dacă acesta a fost oprit',
       }, {
         name: `\`2.\` **${env.BOT_PREFIX}pause / ${env.BOT_PREFIX}p**`,
-        value: 'Oprește redarea videoclipului curent',
+        value: 'Oprește redarea melodiei curente',
       }, {
         name: `\`3.\` **${env.BOT_PREFIX}skip / ${env.BOT_PREFIX}s**`,
         value: 'Trece la melodia următoare dacă există',
@@ -219,8 +217,25 @@ function commandHelp(msg: Discord.Message) {
         name: `\`4.\` **${env.BOT_PREFIX}queue / ${env.BOT_PREFIX}q**`,
         value: 'Afișează lista de redare',
       }, {
-        name: `\`5.\` **${env.BOT_PREFIX}remove / ${env.BOT_PREFIX}r [poziție melodie]**`,
+        name: `\`5.\` **${env.BOT_PREFIX}remove / ${env.BOT_PREFIX}r *<poziție melodie>* **`,
         value: 'Șterge melodia din lista de redare',
+      }, {
+        name: `\`6.\` **${env.BOT_PREFIX}playlist *[nume playlist]* **`,
+        value: 'Afișează listele de redare salvate sau melodiile aflate într-o listă de redare dacă numele acesteia ' +
+          'este specificat\n' +
+          '-----------------------------------------------------------------------------------------------',
+      }, {
+        name: `\`6.1.\` **${env.BOT_PREFIX}playlist load *<nume playlist>* **`,
+        value: 'Încarcă melodiile salvate în lista de redare specificată și începe redarea',
+        inline: true,
+      }, {
+        name: `\`6.2.\` **${env.BOT_PREFIX}playlist save *<nume playlist>* **`,
+        value: 'Salvează melodiile introduse într-o listă de redare cu numele introdus',
+        inline: true,
+      }, {
+        name: `\`6.3.\` **${env.BOT_PREFIX}playlist delete *<nume playlist>* **`,
+        value: 'Șterge lista de redare specificată\n' +
+          '-----------------------------------------------------------------------------------------------',
       }, {
         name: `\`0.\` **${env.BOT_PREFIX}about / ${env.BOT_PREFIX}despre**`,
         value: 'Afișează informații despre bot',
