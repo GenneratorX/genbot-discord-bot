@@ -385,71 +385,81 @@ export class MusicPlayer {
    * @param playlistName Playlist name
    */
   async loadPlaylist(playlistName: string) {
-    const searchResult = await this.searchPlaylistByName(playlistName);
-    this.displayPlaylistSearchStatus(searchResult);
-    if (searchResult.error === false) {
-      const { playlists, exactMatchPosition } = searchResult;
-      if (playlists.length === 1 || exactMatchPosition !== undefined) {
-        let playlistToLoad: number;
-        if (playlistName.length === 1) {
-          playlistToLoad = 0;
-        } else {
-          playlistToLoad = exactMatchPosition as number;
-        }
-
-        this.sendSimpleMessage(
-          `Am găsit o listă de redare cu numele **${playlists[playlistToLoad].playlistName}**. ` +
-          'Așteaptă un moment până încarc melodiile...',
-          'notification'
-        );
-
-        while (this.songList.length > 0) {
-          this.songList.pop();
-        }
-
-        const songs = await this.loadSongsFromPlaylist(playlists[playlistToLoad].playlistId);
-        const rejectedSongs: string[] = [];
-
-        for (let i = 0; i < songs.length; i++) {
-          if (songs[i].error === undefined) {
-            this.songList.push({ ytdlVideoInfo: songs[i].ytdlVideoInfo as ytdl.videoInfo, addedBy: songs[i].addedBy });
+    if (
+      this.currentVoiceChannel.members.size !== 0 &&
+      (this.currentVoiceChannel.members.first() as Discord.GuildMember).user.bot === false
+    ) {
+      const searchResult = await this.searchPlaylistByName(playlistName);
+      this.displayPlaylistSearchStatus(searchResult);
+      if (searchResult.error === false) {
+        const { playlists, exactMatchPosition } = searchResult;
+        if (playlists.length === 1 || exactMatchPosition !== undefined) {
+          let playlistToLoad: number;
+          if (playlistName.length === 1) {
+            playlistToLoad = 0;
           } else {
-            let errorMessage = '';
-            switch (songs[i].error) {
-              case 'VIDEO_NOT_AVAILABLE': errorMessage = 'Videoclip indisponibil'; break;
-              case 'PRIVATE_VIDEO': errorMessage = 'Videoclip privat'; break;
-              case 'NETWORK_ERROR': errorMessage = 'Eroare la preluare'; break;
-            }
-            rejectedSongs.push(
-              `\`${i + 1}.\` https://www.youtube.com/watch?v=${songs[i].videoId} **[${errorMessage}]**\n`
-            );
+            playlistToLoad = exactMatchPosition as number;
           }
-        }
 
-        if (rejectedSongs.length === 0) {
-          this.sendSimpleMessage('Lista de redare a fost încărcată în totalitate!', 'success');
-          this.playSong(0);
-        } else {
-          if (rejectedSongs.length < songs.length) {
-            const rejectedSongsEmbedd = new Discord.MessageEmbed().setColor('#FFFF00');
-            if (rejectedSongs.length === 1) {
-              rejectedSongsEmbedd.setDescription(
-                `Am încărcat o parte din lista de redare. **O melodie** nu a putut fi încărcată!\n` +
-                `**Melodia care nu a fost inclusă în lista de redare este:**\n${rejectedSongs[0]}`
-              );
+          this.sendSimpleMessage(
+            `Am găsit o listă de redare cu numele **${playlists[playlistToLoad].playlistName}**. ` +
+            'Așteaptă un moment până încarc melodiile...',
+            'notification'
+          );
+
+          while (this.songList.length > 0) {
+            this.songList.pop();
+          }
+
+          const songs = await this.loadSongsFromPlaylist(playlists[playlistToLoad].playlistId);
+          const rejectedSongs: string[] = [];
+
+          for (let i = 0; i < songs.length; i++) {
+            if (songs[i].error === undefined) {
+              this.songList.push({
+                ytdlVideoInfo: songs[i].ytdlVideoInfo as ytdl.videoInfo,
+                addedBy: songs[i].addedBy,
+              });
             } else {
-              rejectedSongsEmbedd.setDescription(
-                `Am încărcat o parte din lista de redare. **${rejectedSongs.length} melodii** nu au putut fi ` +
-                `încărcate!\n**Melodiile care nu a fost incluse în lista de redare sunt:**\n${rejectedSongs.join('')}`
+              let errorMessage = '';
+              switch (songs[i].error) {
+                case 'VIDEO_NOT_AVAILABLE': errorMessage = 'Videoclip indisponibil'; break;
+                case 'PRIVATE_VIDEO': errorMessage = 'Videoclip privat'; break;
+                case 'NETWORK_ERROR': errorMessage = 'Eroare la preluare'; break;
+              }
+              rejectedSongs.push(
+                `\`${i + 1}.\` https://www.youtube.com/watch?v=${songs[i].videoId} **[${errorMessage}]**\n`
               );
             }
-            this.currentTextChannel.send(rejectedSongsEmbedd);
+          }
+
+          if (rejectedSongs.length === 0) {
+            this.sendSimpleMessage('Lista de redare a fost încărcată în totalitate!', 'success');
             this.playSong(0);
           } else {
-            this.sendSimpleMessage('Nu am putut să încarc nicio melodie din lista de redare!', 'error');
+            if (rejectedSongs.length < songs.length) {
+              const rejectedSongsEmbedd = new Discord.MessageEmbed().setColor('#FFFF00');
+              if (rejectedSongs.length === 1) {
+                rejectedSongsEmbedd.setDescription(
+                  `Am încărcat o parte din lista de redare. **O melodie** nu a putut fi încărcată!\n` +
+                  `**Melodia care nu a fost inclusă în lista de redare este:**\n${rejectedSongs[0]}`
+                );
+              } else {
+                rejectedSongsEmbedd.setDescription(
+                  `Am încărcat o parte din lista de redare. **${rejectedSongs.length} melodii** nu au putut fi ` +
+                  `încărcate!\n**Melodiile care nu a fost incluse în lista de redare sunt:**\n${rejectedSongs.join('')}`
+                );
+              }
+              this.currentTextChannel.send(rejectedSongsEmbedd);
+              this.playSong(0);
+            } else {
+              this.sendSimpleMessage('Nu am putut să încarc nicio melodie din lista de redare!', 'error');
+            }
           }
         }
       }
+    } else {
+      this.sendSimpleMessage('Intră în camera de voce că altfel o să ascult melodiile singur!', 'error');
     }
   }
 
@@ -615,87 +625,6 @@ export class MusicPlayer {
   }
 
   /**
-   * Removes unnecessary data from the YTDL video info object
-   * @param videoInfo YTDL video info object
-   * @returns Clean YTDL video info object
-   */
-  private cleanYtdlVideoInfoObject(videoInfo: ytdl.videoInfo) {
-    /**
-     * Remove all formats but the highest quality one
-     */
-    const highestQualityAudioFormat =
-      ytdl.chooseFormat(videoInfo.formats, { filter: 'audioonly', quality: 'highestaudio' });
-    while (videoInfo.formats.length > 0) {
-      videoInfo.formats.pop();
-    }
-    videoInfo.formats.push(highestQualityAudioFormat);
-
-    /**
-     * Remove related videos
-     */
-    while (videoInfo.related_videos.length > 0) {
-      videoInfo.related_videos.pop();
-    }
-
-    return videoInfo;
-  }
-
-  /**
-   * Sends a message to the current text channel
-   * @param message Message to send
-   * @param type Message type
-   */
-  private sendSimpleMessage(message: string, type?: 'error' | 'notification' | 'success') {
-    let messageColor;
-
-    switch (type) {
-      case 'error': messageColor = '#FF0000'; break;
-      case 'notification': messageColor = '#FFFF00'; break;
-      default: messageColor = '#00FF00';
-    }
-
-    this.currentTextChannel.send(
-      new Discord.MessageEmbed()
-        .setColor(messageColor)
-        .setDescription(message)
-    );
-  }
-
-  /**
-   * Checks if a song is in the song list
-   * @param videoId YouTube video ID
-   * @returns Whether the song is a duplicate
-   */
-  private isInSongList(videoId: string) {
-    for (let i = 0; i < this.songList.length; i++) {
-      if (this.songList[i].ytdlVideoInfo.videoDetails.videoId === videoId) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Gets the duration in seconds of a song queue
-   * @param queue Song queue object
-   * @returns Duration of the song queue in seconds
-   */
-  private getSongQueueDuration(queue?: { ytdlVideoInfo: ytdl.videoInfo, addedBy: string }[]) {
-    let duration = 0;
-    let songs: { ytdlVideoInfo: ytdl.videoInfo, addedBy: string }[] = [];
-    if (queue !== undefined) {
-      songs = queue;
-    } else {
-      songs = this.songList;
-    }
-
-    for (let i = 0; i < songs.length; i++) {
-      duration += parseInt(songs[i].ytdlVideoInfo.videoDetails.lengthSeconds, 10);
-    }
-    return duration;
-  }
-
-  /**
    * Searches for playlists in the database
    * @param playlistName Playlist name
    * @returns Playlists that matches the playlist name
@@ -730,6 +659,27 @@ export class MusicPlayer {
       return { error: false, exactMatchPosition: exactMatchPosition, playlists: playlists };
     }
     return { error: true };
+  }
+
+  /**
+   * Sends a message to the current text channel
+   * @param message Message to send
+   * @param type Message type
+   */
+  private sendSimpleMessage(message: string, type?: 'error' | 'notification' | 'success') {
+    let messageColor;
+
+    switch (type) {
+      case 'error': messageColor = '#FF0000'; break;
+      case 'notification': messageColor = '#FFFF00'; break;
+      default: messageColor = '#00FF00';
+    }
+
+    this.currentTextChannel.send(
+      new Discord.MessageEmbed()
+        .setColor(messageColor)
+        .setDescription(message)
+    );
   }
 
   /**
@@ -768,6 +718,65 @@ export class MusicPlayer {
     }
   }
 
+  /**
+   * Checks if a song is in the song list
+   * @param videoId YouTube video ID
+   * @returns Whether the song is a duplicate
+   */
+  private isInSongList(videoId: string) {
+    for (let i = 0; i < this.songList.length; i++) {
+      if (this.songList[i].ytdlVideoInfo.videoDetails.videoId === videoId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Gets the duration in seconds of a song queue
+   * @param queue Song queue object
+   * @returns Duration of the song queue in seconds
+   */
+  private getSongQueueDuration(queue?: { ytdlVideoInfo: ytdl.videoInfo, addedBy: string }[]) {
+    let duration = 0;
+    let songs: { ytdlVideoInfo: ytdl.videoInfo, addedBy: string }[] = [];
+    if (queue !== undefined) {
+      songs = queue;
+    } else {
+      songs = this.songList;
+    }
+
+    for (let i = 0; i < songs.length; i++) {
+      duration += parseInt(songs[i].ytdlVideoInfo.videoDetails.lengthSeconds, 10);
+    }
+    return duration;
+  }
+
+  /**
+   * Removes unnecessary data from the YTDL video info object
+   * @param videoInfo YTDL video info object
+   * @returns Clean YTDL video info object
+   */
+  private cleanYtdlVideoInfoObject(videoInfo: ytdl.videoInfo) {
+    /**
+     * Remove all formats but the highest quality one
+     */
+    const highestQualityAudioFormat =
+      ytdl.chooseFormat(videoInfo.formats, { filter: 'audioonly', quality: 'highestaudio' });
+    while (videoInfo.formats.length > 0) {
+      videoInfo.formats.pop();
+    }
+    videoInfo.formats.push(highestQualityAudioFormat);
+
+    /**
+     * Remove related videos
+     */
+    while (videoInfo.related_videos.length > 0) {
+      videoInfo.related_videos.pop();
+    }
+
+    return videoInfo;
+  }
 
   /**
    * Play status
