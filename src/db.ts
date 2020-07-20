@@ -11,7 +11,7 @@ const pool = new pg.Pool(env.PG_CONFIG);
  * @param parameters Query parameters
  * @returns Query result if the query was successfull, false otherwise
  */
-export async function query(query: string, parameters?: any[]): Promise<{ [property: string]: any }[]> {
+export async function query(query: string, parameters?: any[]) {
   let connection: pg.PoolClient | undefined;
   try {
     connection = await pool.connect();

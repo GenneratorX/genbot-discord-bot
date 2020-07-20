@@ -385,22 +385,29 @@ export class MusicPlayer {
    * @param playlistName Playlist name
    */
   async loadPlaylist(playlistName: string) {
-    playlistName = playlistName.trim().replace(/\s+/g, ' ');
-    if (playlistName.length > 0) {
-      const searchQuery = await db.query(
-        'SELECT playlist_id, playlist_name FROM playlist WHERE playlist_name ILIKE $1;', [`%${playlistName}%`]
-      );
-      if (searchQuery.length === 1) {
+    const searchResult = await this.searchPlaylistByName(playlistName);
+    this.displayPlaylistSearchStatus(searchResult);
+    if (searchResult.error === false) {
+      const { playlists, exactMatchPosition } = searchResult;
+      if (playlists.length === 1 || exactMatchPosition !== undefined) {
+        let playlistToLoad: number;
+        if (playlistName.length === 1) {
+          playlistToLoad = 0;
+        } else {
+          playlistToLoad = exactMatchPosition as number;
+        }
+
         this.sendSimpleMessage(
-          `Am găsit o listă de redare cu numele **${searchQuery[0].playlist_name}**. ` +
+          `Am găsit o listă de redare cu numele **${playlists[playlistToLoad].playlistName}**. ` +
           'Așteaptă un moment până încarc melodiile...',
           'notification'
         );
+
         while (this.songList.length > 0) {
           this.songList.pop();
         }
 
-        const songs = await this.loadSongsFromPlaylist(searchQuery[0].playlist_id);
+        const songs = await this.loadSongsFromPlaylist(playlists[playlistToLoad].playlistId);
         const rejectedSongs: string[] = [];
 
         for (let i = 0; i < songs.length; i++) {
@@ -442,15 +449,7 @@ export class MusicPlayer {
             this.sendSimpleMessage('Nu am putut să încarc nicio melodie din lista de redare!', 'error');
           }
         }
-      } else {
-        if (searchQuery.length > 1) {
-          this.sendSimpleMessage('Există mai multe liste de redare care conțin numele introdus!', 'notification');
-        } else {
-          this.sendSimpleMessage('Nu există o listă de redare cu acel nume!', 'error');
-        }
       }
-    } else {
-      this.sendSimpleMessage('Introdu și tu măcar un caracter, ca să știu ce să caut!', 'error');
     }
   }
 
@@ -483,19 +482,25 @@ export class MusicPlayer {
    * @param playlistName Playlist name
    */
   async showPlaylistSongs(playlistName: string) {
-    playlistName = playlistName.trim().replace(/\s+/g, ' ');
-    if (playlistName.length > 0) {
-      const searchQuery = await db.query(
-        'SELECT playlist_id, playlist_name FROM playlist WHERE playlist_name ILIKE $1;', [`%${playlistName}%`]
-      );
-      if (searchQuery.length === 1) {
+    const searchResult = await this.searchPlaylistByName(playlistName);
+    this.displayPlaylistSearchStatus(searchResult);
+    if (searchResult.error === false) {
+      const { playlists, exactMatchPosition } = searchResult;
+      if (playlists.length === 1 || exactMatchPosition !== undefined) {
+        let playlistToShow: number;
+        if (playlists.length === 1) {
+          playlistToShow = 0;
+        } else {
+          playlistToShow = exactMatchPosition as number;
+        }
+
         this.sendSimpleMessage(
-          `Am găsit o listă de redare cu numele **${searchQuery[0].playlist_name}**. ` +
+          `Am găsit o listă de redare cu numele **${playlists[playlistToShow].playlistName}**. ` +
           'Așteaptă un moment până încarc melodiile...',
           'notification'
         );
 
-        const songs = await this.loadSongsFromPlaylist(searchQuery[0].playlist_id);
+        const songs = await this.loadSongsFromPlaylist(playlists[playlistToShow].playlistId);
         const rejectedSongs: string[] = [];
         const queue: { ytdlVideoInfo: ytdl.videoInfo, addedBy: string }[] = [];
 
@@ -520,34 +525,25 @@ export class MusicPlayer {
           this.displaySongQueue(queue);
         } else {
           if (rejectedSongs.length < songs.length) {
-            const rejectedSongsEmbedd = new Discord.MessageEmbed().setColor('#FFFF00');
             if (rejectedSongs.length === 1) {
-              rejectedSongsEmbedd.setDescription(
+              this.sendSimpleMessage(
                 `Am încărcat o parte din lista de redare. **O melodie** nu a putut fi încărcată!\n` +
-                `**Melodia care nu a fost inclusă în lista de redare este:**\n${rejectedSongs[0]}`
+                `**Melodia care nu a fost inclusă în lista de redare este:**\n${rejectedSongs[0]}`,
+                'notification'
               );
             } else {
-              rejectedSongsEmbedd.setDescription(
+              this.sendSimpleMessage(
                 `Am încărcat o parte din lista de redare. **${rejectedSongs.length} melodii** nu au putut fi ` +
-                `încărcate!\n**Melodiile care nu a fost incluse în lista de redare sunt:**\n${rejectedSongs.join('')}`
+                `încărcate!\n**Melodiile care nu a fost incluse în lista de redare sunt:**\n${rejectedSongs.join('')}`,
+                'notification'
               );
             }
-            this.currentTextChannel.send(rejectedSongsEmbedd);
             this.displaySongQueue(queue);
           } else {
             this.sendSimpleMessage('Nu am putut să încarc nicio melodie din lista de redare!', 'error');
           }
         }
-
-      } else {
-        if (searchQuery.length > 1) {
-          this.sendSimpleMessage('Există mai multe liste de redare care conțin numele introdus!', 'notification');
-        } else {
-          this.sendSimpleMessage('Nu există o listă de redare cu acel nume!', 'error');
-        }
       }
-    } else {
-      this.sendSimpleMessage('Introdu și tu măcar un caracter, ca să știu ce să afișez!', 'error');
     }
   }
 
@@ -556,26 +552,24 @@ export class MusicPlayer {
    * @param playlistName Playlist name
    */
   async removePlaylist(playlistName: string) {
-    playlistName = playlistName.trim().replace(/\s+/g, ' ');
-    if (playlistName.length > 0) {
-      const searchQuery = await db.query(
-        'SELECT playlist_id, playlist_name FROM playlist WHERE playlist_name ILIKE $1;', [`%${playlistName}%`]
-      );
-      if (searchQuery.length === 1) {
+    const searchResult = await this.searchPlaylistByName(playlistName);
+    this.displayPlaylistSearchStatus(searchResult);
+    if (searchResult.error === false) {
+      const { playlists, exactMatchPosition } = searchResult;
+      if (playlists.length === 1 || exactMatchPosition !== undefined) {
+        let playlistToDelete: number;
+        if (playlists.length === 1) {
+          playlistToDelete = 0;
+        } else {
+          playlistToDelete = exactMatchPosition as number;
+        }
+
         this.sendSimpleMessage(
-          `Am șters lista de redare cu numele **${searchQuery[0].playlist_name}**.`,
+          `Am șters lista de redare cu numele **${playlists[playlistToDelete].playlistName}**.`,
           'notification'
         );
-        db.query('DELETE FROM playlist WHERE playlist_id = $1;', [searchQuery[0].playlist_id]);
-      } else {
-        if (searchQuery.length > 1) {
-          this.sendSimpleMessage('Există mai multe liste de redare care conțin numele introdus!', 'notification');
-        } else {
-          this.sendSimpleMessage('Nu există o listă de redare cu acel nume!', 'error');
-        }
+        db.query('DELETE FROM playlist WHERE playlist_id = $1;', [playlists[playlistToDelete].playlistId]);
       }
-    } else {
-      this.sendSimpleMessage('Introdu și tu măcar un caracter, ca să știu ce să șterg!', 'error');
     }
   }
 
@@ -615,10 +609,8 @@ export class MusicPlayer {
           default:
             songList[i].error = 'NETWORK_ERROR';
         }
-
       }
     }
-
     return songList;
   }
 
@@ -688,7 +680,7 @@ export class MusicPlayer {
    * @param queue Song queue object
    * @returns Duration of the song queue in seconds
    */
-  getSongQueueDuration(queue?: { ytdlVideoInfo: ytdl.videoInfo, addedBy: string }[]) {
+  private getSongQueueDuration(queue?: { ytdlVideoInfo: ytdl.videoInfo, addedBy: string }[]) {
     let duration = 0;
     let songs: { ytdlVideoInfo: ytdl.videoInfo, addedBy: string }[] = [];
     if (queue !== undefined) {
@@ -702,6 +694,80 @@ export class MusicPlayer {
     }
     return duration;
   }
+
+  /**
+   * Searches for playlists in the database
+   * @param playlistName Playlist name
+   * @returns Playlists that matches the playlist name
+   */
+  private async searchPlaylistByName(playlistName: string): Promise<{
+    error: false,
+    exactMatchPosition?: number,
+    playlists: {
+      playlistId: string,
+      playlistName: string,
+      createdBy: string
+    }[]
+  } | {
+    error: true
+  }> {
+    playlistName = playlistName.replace(/\s+/g, ' ');
+    if (playlistName.length > 0) {
+      const playlists: { playlistId: string, playlistName: string, createdBy: string }[] = await db.query(
+        'SELECT playlist_id "playlistId", playlist_name "playlistName", created_by "createdBy" ' +
+        'FROM playlist WHERE playlist_name ILIKE $1;',
+        [`%${playlistName}%`]
+      );
+
+      let exactMatchPosition;
+      for (let i = 0; i < playlists.length; i++) {
+        if (playlists[i].playlistName === playlistName) {
+          exactMatchPosition = i;
+          i = playlists.length;
+        }
+      }
+
+      return { error: false, exactMatchPosition: exactMatchPosition, playlists: playlists };
+    }
+    return { error: true };
+  }
+
+  /**
+   * Helper function that displays playlist search status messages
+   * @param searchStatus Playlist search object
+   */
+  private displayPlaylistSearchStatus(searchStatus: {
+    error: false,
+    exactMatchPosition?: number,
+    playlists: {
+      playlistId: string,
+      playlistName: string,
+      createdBy: string
+    }[]
+  } | {
+    error: true
+  }) {
+    if (searchStatus.error === false) {
+      const { playlists } = searchStatus;
+      if (playlists.length > 1) {
+        const multipleMatches: string[] = [];
+        for (let i = 0; i < playlists.length; i++) {
+          multipleMatches.push(`\u25cf ${playlists[i].playlistName} **[<@${playlists[i].createdBy}>]**\n`);
+        }
+        this.sendSimpleMessage(
+          `**Există mai multe liste de redare care conțin numele introdus:**\n${multipleMatches.join('')}`,
+          'notification'
+        );
+      } else {
+        if (playlists.length === 0) {
+          this.sendSimpleMessage('Nu există o listă de redare cu acel nume!', 'error');
+        }
+      }
+    } else {
+      this.sendSimpleMessage('Introdu și tu măcar un caracter, ca să știu ce să caut!', 'error');
+    }
+  }
+
 
   /**
    * Play status
