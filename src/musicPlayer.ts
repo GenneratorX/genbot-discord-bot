@@ -22,7 +22,8 @@ export class MusicPlayer {
   private voiceConnection?: Discord.VoiceConnection;
   private streamDispatcher?: Discord.StreamDispatcher;
 
-  private disconnectTimer: NodeJS.Timeout;
+  private songListEndDisconnectTimer: NodeJS.Timeout;
+  private noUsersDisconnectTimer: NodeJS.Timeout;
 
   /**
    * @param youtubeLink YouTube link to play
@@ -43,7 +44,8 @@ export class MusicPlayer {
     this.currentTextChannel = textChannel;
     this.currentVoiceChannel = voiceChannel;
 
-    this.disconnectTimer = setTimeout(() => { }, 100);
+    this.songListEndDisconnectTimer = setTimeout(() => { }, 100);
+    this.noUsersDisconnectTimer = setTimeout(() => { }, 100);
 
     this.addSong(youtubeLink, addedBy);
   }
@@ -150,7 +152,7 @@ export class MusicPlayer {
    */
   async playSong(songPosition: number) {
     if (this.songList[songPosition] !== undefined) {
-      clearTimeout(this.disconnectTimer);
+      clearTimeout(this.songListEndDisconnectTimer);
       this.currentSong = songPosition;
       try {
         if (this.voiceConnection === undefined || this.voiceConnection.status === 4) {
@@ -159,11 +161,7 @@ export class MusicPlayer {
 
           this.voiceConnection.on('disconnect', () => {
             console.log(`[DISCONNECTED FROM VOICE CHANNEL]`);
-            clearTimeout(this.disconnectTimer);
-            while (this.songList.length > 0) {
-              this.songList.pop();
-            }
-            this.currentSong = -1;
+            this.destroy();
           });
 
           this.voiceConnection.on('error', error => {
@@ -234,7 +232,7 @@ export class MusicPlayer {
       }
     } else {
       this.currentSong = -1;
-      this.disconnectTimer = setTimeout(() => {
+      this.songListEndDisconnectTimer = setTimeout(() => {
         if (this.voiceConnection !== undefined) {
           this.voiceConnection.disconnect();
         }
@@ -625,6 +623,21 @@ export class MusicPlayer {
   }
 
   /**
+   * Sets the status of the no users in voice channel disconnect timer
+   * @param enable Whether to enable the disconnect timer
+   */
+  enableNoUsersDisconnectTimer(enable?: boolean) {
+    if (enable === false) {
+      clearTimeout(this.noUsersDisconnectTimer);
+    } else {
+      this.noUsersDisconnectTimer = setTimeout(() => {
+        this.destroy();
+        this.sendSimpleMessage('Am rămas singur ... așa că am ieșit!', 'notification');
+      }, 300000); // 5 minutes
+    }
+  }
+
+  /**
    * Searches for playlists in the database
    * @param playlistName Playlist name
    * @returns Playlists that matches the playlist name
@@ -779,6 +792,23 @@ export class MusicPlayer {
   }
 
   /**
+   * Destroys the player object
+   */
+  private destroy() {
+    while (this.songList.length > 0) {
+      this.songList.pop();
+    }
+    this.currentSong = -1;
+    this.isPlaying = false;
+
+    clearTimeout(this.songListEndDisconnectTimer);
+    clearTimeout(this.noUsersDisconnectTimer);
+
+    this.voiceChannel.leave();
+  }
+
+
+  /**
    * Play status
    */
   get isplaying() {
@@ -791,6 +821,21 @@ export class MusicPlayer {
   get songCount() {
     return this.songList.length;
   }
+
+  /**
+   * Gets or
+   */
+  get voiceChannel() {
+    return this.currentVoiceChannel;
+  }
+
+  /**
+   * updates the current voice channel
+   */
+  set voiceChannel(newVoiceChannel: Discord.VoiceChannel) {
+    this.currentVoiceChannel = newVoiceChannel;
+  }
+
 }
 
 /**
