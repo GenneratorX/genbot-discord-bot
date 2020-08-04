@@ -16,16 +16,6 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
-ALTER TABLE ONLY discord.playlist_song DROP CONSTRAINT playlist_song_playlist_id_fkey;
-ALTER TABLE ONLY discord.playlist_song DROP CONSTRAINT playlist_song_pkey;
-ALTER TABLE ONLY discord.playlist DROP CONSTRAINT playlist_playlist_name_key;
-ALTER TABLE ONLY discord.playlist DROP CONSTRAINT playlist_pkey;
-ALTER TABLE discord.playlist ALTER COLUMN playlist_id DROP DEFAULT;
-DROP TABLE discord.text_channel;
-DROP TABLE discord.playlist_song;
-DROP SEQUENCE discord.playlist_playlist_id_seq;
-DROP TABLE discord.playlist;
-DROP SCHEMA discord;
 --
 -- Name: discord; Type: SCHEMA; Schema: -; Owner: -
 --
@@ -167,3 +157,4 @@ GRANT SELECT,INSERT,DELETE ON TABLE discord.text_channel TO "discord-bot";
 --
 -- PostgreSQL database dump complete
 --
+
