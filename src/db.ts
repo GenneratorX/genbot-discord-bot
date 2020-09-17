@@ -3,7 +3,7 @@
 import pg = require('pg');
 import env = require('./env');
 
-const pool = new pg.Pool(env.PG_CONFIG);
+export const pool = new pg.Pool(env.PG_CONFIG);
 
 /**
  * Executes a query on the database
