@@ -62,6 +62,9 @@ export const commands: Commands[] = [
       }
     ],
   }, {
+    name: 'latency',
+    function: commandLatency,
+  }, {
     name: 'about',
     function: commandAbout,
   }, {
@@ -292,6 +295,18 @@ function commandPlaylistDelete(message: Discord.Message, lastParameter: string) 
   if (musicPlayer !== undefined) {
     musicPlayer.removePlaylist(lastParameter);
   }
+}
+
+/**
+ * Displays bot latency
+ * @param message Discord message
+ */
+function commandLatency(message: Discord.Message) {
+  message.channel.send(
+    new Discord.MessageEmbed()
+      .setColor('#0000FF')
+      .setDescription(`**Latență (Bot - Server Discord):** ${bot.client.ws.ping}ms`)
+  );
 }
 
 /**

@@ -8,7 +8,7 @@ import command = require('./command');
 
 import { musicPlayer } from './command';
 
-const client = new Discord.Client();
+export const client = new Discord.Client();
 export const textChannels: string[] = [];
 
 /**
@@ -79,6 +79,5 @@ process.on('SIGINT', exitCleanup);
 process.on('SIGUSR1', exitCleanup);
 process.on('SIGUSR2', exitCleanup);
 process.on('SIGTERM', exitCleanup);
-process.on('uncaughtException', exitCleanup);
 
 init();
