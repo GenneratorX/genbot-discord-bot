@@ -3,9 +3,10 @@
 import Discord = require('discord.js');
 import ytdl = require('ytdl-core');
 
+import { spawn } from 'child_process';
+
 import env = require('./env');
 import db = require('./db');
-
 
 export class MusicPlayer {
 
@@ -171,10 +172,28 @@ export class MusicPlayer {
           });
         }
 
-        this.streamDispatcher = this.voiceConnection.play(
-          ytdl.downloadFromInfo(this.songList[songPosition].ytdlVideoInfo, env.YTDL_CONFIG),
-          env.DISPATCHER_CONFIG
-        );
+        const ffmpegParams = [
+          /**
+           * Must use reconnect. Otherwise ffmpeg stops mid song most of the time with an EOF for some reason.
+           */
+          '-reconnect', '1',
+          '-reconnect_streamed', '1',
+          '-reconnect_delay_max', '5',
+          '-i', this.songList[songPosition].ytdlVideoInfo.formats[0].url,
+          /**
+           * Using WEBM instead of Opus because Opus gives `Error: Did not find the EBML tag at the start of the stream`
+           * if it is used in combination with `type: webm/opus` stream option
+           */
+          '-f', 'webm',
+          '-b:a', this.voiceChannel.bitrate.toString(),
+          '-compression_level', '10',
+          '-application', 'audio',
+          '-af', 'dynaudnorm=f=150',
+          'pipe:1'
+        ];
+
+        const ffmpeg = spawn('ffmpeg', ffmpegParams);
+        this.streamDispatcher = this.voiceConnection.play(ffmpeg.stdout, env.DISPATCHER_CONFIG);
 
         this.streamDispatcher.on('start', () => {
           console.log(`  [SONG START] ${this.songList[songPosition].ytdlVideoInfo.videoDetails.videoId} ` +
