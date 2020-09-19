@@ -3,7 +3,7 @@
 import Discord = require('discord.js');
 import ytdl = require('ytdl-core');
 
-import { spawn } from 'child_process';
+import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 
 import env = require('./env');
 import db = require('./db');
@@ -22,6 +22,8 @@ export class MusicPlayer {
 
   private voiceConnection?: Discord.VoiceConnection;
   private streamDispatcher?: Discord.StreamDispatcher;
+
+  private ffmpeg?: ChildProcessWithoutNullStreams;
 
   private songListEndDisconnectTimer: NodeJS.Timeout;
   private noUsersDisconnectTimer: NodeJS.Timeout;
@@ -192,8 +194,8 @@ export class MusicPlayer {
           'pipe:1'
         ];
 
-        const ffmpeg = spawn('ffmpeg', ffmpegParams);
-        this.streamDispatcher = this.voiceConnection.play(ffmpeg.stdout, env.DISPATCHER_CONFIG);
+        this.ffmpeg = spawn('ffmpeg', ffmpegParams);
+        this.streamDispatcher = this.voiceConnection.play(this.ffmpeg.stdout, env.DISPATCHER_CONFIG);
 
         this.streamDispatcher.on('start', () => {
           console.log(`  [SONG START] ${this.songList[songPosition].ytdlVideoInfo.videoDetails.videoId} ` +
@@ -288,6 +290,9 @@ export class MusicPlayer {
   skipSong() {
     if (this.currentSong !== -1 && this.streamDispatcher !== undefined) {
       this.streamDispatcher.end();
+      if (this.ffmpeg !== undefined) {
+        this.ffmpeg.kill();
+      }
       this.sendSimpleMessage('Trecem la următoarea melodie...', 'notification');
     }
   }
@@ -819,6 +824,10 @@ export class MusicPlayer {
     }
     this.currentSong = -1;
     this.isPlaying = false;
+
+    if (this.ffmpeg !== undefined) {
+      this.ffmpeg.kill();
+    }
 
     clearTimeout(this.songListEndDisconnectTimer);
     clearTimeout(this.noUsersDisconnectTimer);
