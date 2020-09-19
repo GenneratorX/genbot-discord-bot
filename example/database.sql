@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 12.3
--- Dumped by pg_dump version 12.3
+-- Dumped from database version 12.4
+-- Dumped by pg_dump version 12.4
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -120,41 +120,5 @@ ALTER TABLE ONLY discord.playlist_song
 
 
 --
--- Name: SCHEMA discord; Type: ACL; Schema: -; Owner: -
---
-
-GRANT USAGE ON SCHEMA discord TO "discord-bot";
-
-
---
--- Name: TABLE playlist; Type: ACL; Schema: discord; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE ON TABLE discord.playlist TO "discord-bot";
-
-
---
--- Name: SEQUENCE playlist_playlist_id_seq; Type: ACL; Schema: discord; Owner: -
---
-
-GRANT USAGE ON SEQUENCE discord.playlist_playlist_id_seq TO "discord-bot";
-
-
---
--- Name: TABLE playlist_song; Type: ACL; Schema: discord; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE ON TABLE discord.playlist_song TO "discord-bot";
-
-
---
--- Name: TABLE text_channel; Type: ACL; Schema: discord; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE ON TABLE discord.text_channel TO "discord-bot";
-
-
---
 -- PostgreSQL database dump complete
 --
-
