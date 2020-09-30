@@ -48,10 +48,6 @@ export class MusicPlayer {
    * Whether the player is ready
    */
   private ready: boolean;
-  /**
-   * Whether the player is disposed
-   */
-  private disposed: boolean;
 
   /**
    * Current text channel
@@ -108,7 +104,6 @@ export class MusicPlayer {
     this.currentSong = -1;
 
     this.ready = false;
-    this.disposed = false;
 
     this.playlistEndDisconnectTimer = setTimeout(() => { }, 1);
     this.emptyVoiceChannelDisconnectTimer = setTimeout(() => { }, 1);
@@ -465,10 +460,8 @@ export class MusicPlayer {
     this.playList = [];
     this.currentSong = -1;
     this.ready = false;
-    this.disposed = true;
 
     console.log(this.ready);
-    console.log(this.disposed);
 
     clearTimeout(this.playlistEndDisconnectTimer);
     clearTimeout(this.emptyVoiceChannelDisconnectTimer);
