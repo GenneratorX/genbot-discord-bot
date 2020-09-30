@@ -43,10 +43,6 @@ export class MusicPlayer {
    * Index of the current song
    */
   private currentSong: number
-  /**
-   * Whether the player is paused
-   */
-  private paused: boolean;
 
   /**
    * Whether the player is ready
@@ -110,7 +106,6 @@ export class MusicPlayer {
 
     this.playList = [];
     this.currentSong = -1;
-    this.paused = true;
 
     this.ready = false;
     this.disposed = false;
@@ -268,7 +263,6 @@ export class MusicPlayer {
 
       this.voiceConnection.on('error', error => {
         console.log(error);
-        this.paused = true;
         this.sendSimpleMessage('Am avut o problemă la conectare ... mai încearcă odată!', 'error');
       });
     }
@@ -306,7 +300,6 @@ export class MusicPlayer {
 
       this.streamDispatcher.on('start', () => {
         console.log(`  [SONG START] ${this.playList[this.currentSong].videoId}`);
-        this.paused = false;
       });
 
       this.streamDispatcher.on('finish', () => {
@@ -315,8 +308,6 @@ export class MusicPlayer {
         if (this.ffmpegEncoder !== undefined) {
           this.ffmpegEncoder.kill();
         }
-
-        this.paused = true;
 
         this.playList[this.currentSong].videoDownloadLink = null;
         this.playList[this.currentSong].videoDownloadLinkExpiration = null;
@@ -331,8 +322,6 @@ export class MusicPlayer {
         if (this.ffmpegEncoder !== undefined) {
           this.ffmpegEncoder.kill();
         }
-
-        this.paused = true;
 
         this.playList[this.currentSong].videoDownloadLink = null;
         this.playList[this.currentSong].videoDownloadLinkExpiration = null;
@@ -358,9 +347,8 @@ export class MusicPlayer {
    * Pauses the current song
    */
   pause() {
-    if (this.paused === false) {
-      (this.streamDispatcher as Discord.StreamDispatcher).pause(true);
-      this.paused = true;
+    if (this.streamDispatcher !== undefined && this.streamDispatcher.paused === false) {
+      this.streamDispatcher.pause(true);
       this.sendSimpleMessage('Opresc melodia imediat!', 'notification');
     }
   }
@@ -369,9 +357,8 @@ export class MusicPlayer {
    * Unpauses the current song
    */
   unpause() {
-    if (this.paused === true && this.streamDispatcher !== undefined && this.streamDispatcher.destroyed === false) {
+    if (this.streamDispatcher !== undefined && this.streamDispatcher.paused === true) {
       this.streamDispatcher.resume();
-      this.paused = false;
       this.sendSimpleMessage('Continuăm de unde am rămas!', 'notification');
     }
   }
@@ -477,15 +464,23 @@ export class MusicPlayer {
 
     this.playList = [];
     this.currentSong = -1;
-    this.paused = true;
     this.ready = false;
     this.disposed = true;
 
-    console.log(this.paused);
     console.log(this.ready);
     console.log(this.disposed);
 
     clearTimeout(this.playlistEndDisconnectTimer);
     clearTimeout(this.emptyVoiceChannelDisconnectTimer);
+  }
+
+  /**
+   * Whether the player is paused
+   */
+  get paused() {
+    if (this.streamDispatcher !== undefined) {
+      return this.streamDispatcher.paused;
+    }
+    return true;
   }
 }
