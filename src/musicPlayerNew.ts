@@ -90,7 +90,7 @@ export class MusicPlayer {
   private emptyVoiceChannelDisconnectTimer: NodeJS.Timeout;
 
   /**
-   * 
+   * Lock for music player object creation
    */
   public static lockMusicPlayerCreation = false;
 
@@ -351,6 +351,28 @@ export class MusicPlayer {
           this.sendSimpleMessage('Videoclipul nu mai este disponibil pentru redare ... trec la următoarul!', 'error');
       }
       this.playSong(this.currentSong + 1);
+    }
+  }
+
+  /**
+   * Pauses the current song
+   */
+  pause() {
+    if (this.paused === false) {
+      (this.streamDispatcher as Discord.StreamDispatcher).pause(true);
+      this.paused = true;
+      this.sendSimpleMessage('Opresc melodia imediat!', 'notification');
+    }
+  }
+
+  /**
+   * Unpauses the current song
+   */
+  unpause() {
+    if (this.paused === true && this.streamDispatcher !== undefined && this.streamDispatcher.destroyed === false) {
+      this.streamDispatcher.resume();
+      this.paused = false;
+      this.sendSimpleMessage('Continuăm de unde am rămas!', 'notification');
     }
   }
 
