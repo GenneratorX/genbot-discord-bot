@@ -276,6 +276,31 @@ export class MusicPlayer {
   }
 
   /**
+   * Remove a song from the playlist
+   * @param songPosition Position of the song in the playlist
+   */
+  removeSong(songPosition: number) {
+    if (songPosition >= 0 && this.playList[songPosition] !== undefined) {
+      this.playList.splice(songPosition, 1);
+
+      if (this.currentSong === songPosition) {
+        this.currentSong--;
+      }
+
+      (this.streamDispatcher as Discord.StreamDispatcher).end();
+      this.sendSimpleMessage(`Am șters melodia aflată pe poziția **\`${songPosition + 1}\`** !`, 'success');
+    } else {
+      if (isNaN(songPosition) === false) {
+        this.sendSimpleMessage(`Poziția **\`${songPosition + 1}\`** nu există în lista de redare!`, 'error');
+      } else {
+        this.sendSimpleMessage(
+          'Probabil trebuie să introduci un număr după comanda de ștergere și nu niște litere!', 'error'
+        );
+      }
+    }
+  }
+
+  /**
    * Checks if a video exists in the playlist
    * @param videoId YouTube video ID
    * @returns Whether the video exists in the playlist
@@ -369,14 +394,16 @@ export class MusicPlayer {
       });
 
       this.streamDispatcher.on('finish', () => {
-        console.log(`  [SONG END] ${this.playList[this.currentSong].videoId}`);
+        console.log('  [SONG END]');
 
         if (this.ffmpegEncoder !== undefined) {
           this.ffmpegEncoder.kill();
         }
 
-        this.playList[this.currentSong].videoDownloadLink = null;
-        this.playList[this.currentSong].videoDownloadLinkExpiration = null;
+        if (this.playList[this.currentSong] !== undefined) {
+          this.playList[this.currentSong].videoDownloadLink = null;
+          this.playList[this.currentSong].videoDownloadLinkExpiration = null;
+        }
 
         this.playSong(this.currentSong + 1);
       });
