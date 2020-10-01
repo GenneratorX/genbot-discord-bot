@@ -246,6 +246,76 @@ export class MusicPlayer {
   }
 
   /**
+   * Pauses the current song
+   */
+  pause() {
+    if (this.streamDispatcher !== undefined && this.streamDispatcher.paused === false) {
+      this.streamDispatcher.pause(true);
+      this.sendSimpleMessage('Opresc melodia imediat!', 'notification');
+    }
+  }
+
+  /**
+   * Unpauses the current song
+   */
+  unpause() {
+    if (this.streamDispatcher !== undefined && this.streamDispatcher.paused === true) {
+      this.streamDispatcher.resume();
+      this.sendSimpleMessage('Continuăm de unde am rămas!', 'notification');
+    }
+  }
+
+  /**
+   * Skips the current playing song
+   */
+  skip() {
+    if (this.currentSong !== -1) {
+      (this.streamDispatcher as Discord.StreamDispatcher).end();
+      this.sendSimpleMessage('Trecem la următoarea melodie...', 'notification');
+    }
+  }
+
+  /**
+   * Checks if a video exists in the playlist
+   * @param videoId YouTube video ID
+   * @returns Whether the video exists in the playlist
+   */
+  private alreadyExists(videoId: string) {
+    for (let i = 0; i < this.playList.length; i++) {
+      if (this.playList[i].videoId === videoId) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Gets the best quality audio stream download link
+   * @param videoInfo YTDL Video info object
+   * @returns Download link and expiration as UNIX timestamp
+   */
+  private getBestQualityDownloadFormat(videoInfo: ytdl.videoInfo) {
+    const highestQualityAudioFormatURL =
+      ytdl.chooseFormat(videoInfo.formats, { filter: 'audioonly', quality: 'highestaudio' }).url;
+
+    const downloadLinkExpiration = new URL(highestQualityAudioFormatURL).searchParams.get('expire');
+
+    let linkExpiration: number;
+    if (downloadLinkExpiration !== null) {
+      linkExpiration = parseInt(downloadLinkExpiration, 10) - 40;
+    } else {
+      /**
+       * Typical YouTube link expiration is about 6 hours
+       * or 21540 seconds according to streamingData.expiresInSenconds.
+       * Subtract 40 seconds from that to account for download/processing delays
+       */
+      linkExpiration = util.unixTimestamp() + 21500;
+    }
+
+    return { videoDownloadLink: highestQualityAudioFormatURL, videoDownloadLinkExpiration: linkExpiration };
+  }
+
+  /**
    * Creates a voice connection in the current voice channel
    */
   private async createVoiceConnection() {
@@ -340,26 +410,6 @@ export class MusicPlayer {
   }
 
   /**
-   * Pauses the current song
-   */
-  pause() {
-    if (this.streamDispatcher !== undefined && this.streamDispatcher.paused === false) {
-      this.streamDispatcher.pause(true);
-      this.sendSimpleMessage('Opresc melodia imediat!', 'notification');
-    }
-  }
-
-  /**
-   * Unpauses the current song
-   */
-  unpause() {
-    if (this.streamDispatcher !== undefined && this.streamDispatcher.paused === true) {
-      this.streamDispatcher.resume();
-      this.sendSimpleMessage('Continuăm de unde am rămas!', 'notification');
-    }
-  }
-
-  /**
    * Checks if a video download link is valid and tries to generate a new one if expired/missing
    * @returns Whether the download link is valid
    */
@@ -386,46 +436,6 @@ export class MusicPlayer {
   }
 
   /**
-   * Gets the best quality audio stream download link
-   * @param videoInfo YTDL Video info object
-   * @returns Download link and expiration as UNIX timestamp
-   */
-  private getBestQualityDownloadFormat(videoInfo: ytdl.videoInfo) {
-    const highestQualityAudioFormatURL =
-      ytdl.chooseFormat(videoInfo.formats, { filter: 'audioonly', quality: 'highestaudio' }).url;
-
-    const downloadLinkExpiration = new URL(highestQualityAudioFormatURL).searchParams.get('expire');
-
-    let linkExpiration: number;
-    if (downloadLinkExpiration !== null) {
-      linkExpiration = parseInt(downloadLinkExpiration, 10) - 40;
-    } else {
-      /**
-       * Typical YouTube link expiration is about 6 hours
-       * or 21540 seconds according to streamingData.expiresInSenconds.
-       * Subtract 40 seconds from that to account for download/processing delays
-       */
-      linkExpiration = util.unixTimestamp() + 21500;
-    }
-
-    return { videoDownloadLink: highestQualityAudioFormatURL, videoDownloadLinkExpiration: linkExpiration };
-  }
-
-  /**
-   * Checks if a video exists in the playlist
-   * @param videoId YouTube video ID
-   * @returns Whether the video exists in the playlist
-   */
-  private alreadyExists(videoId: string) {
-    for (let i = 0; i < this.playList.length; i++) {
-      if (this.playList[i].videoId === videoId) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
    * Sends a message to the current text channel
    * @param message Message to send
    * @param type Message type
@@ -449,6 +459,16 @@ export class MusicPlayer {
   }
 
   /**
+   * Whether the player is paused
+   */
+  get paused() {
+    if (this.streamDispatcher !== undefined) {
+      return this.streamDispatcher.paused;
+    }
+    return true;
+  }
+
+  /**
    * Disposes the player object
    */
   private dispose() {
@@ -466,15 +486,5 @@ export class MusicPlayer {
 
     clearTimeout(this.playlistEndDisconnectTimer);
     clearTimeout(this.emptyVoiceChannelDisconnectTimer);
-  }
-
-  /**
-   * Whether the player is paused
-   */
-  get paused() {
-    if (this.streamDispatcher !== undefined) {
-      return this.streamDispatcher.paused;
-    }
-    return true;
   }
 }
