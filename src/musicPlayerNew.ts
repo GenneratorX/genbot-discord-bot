@@ -251,6 +251,7 @@ export class MusicPlayer {
   private async createVoiceConnection() {
     if (this.voiceConnection === undefined || this.voiceConnection.status === 4) {
       this.voiceConnection = await this.voiceChannel.join();
+      this.voiceConnection.voice.setSelfDeaf(true);
 
       this.voiceConnection.on('disconnect', () => {
         this.dispose();
@@ -368,7 +369,7 @@ export class MusicPlayer {
       this.playList[this.currentSong].videoDownloadLinkExpiration as number < util.unixTimestamp()
     ) {
       try {
-        const videoInfo = await ytdl.getInfo(`https://youtube.com/watch?v=${this.playList[this.currentSong].videoId}`);
+        const videoInfo = await ytdl.getInfo(this.playList[this.currentSong].videoId);
         if (videoInfo.player_response.playabilityStatus.status === 'OK') {
           const bestQualityFormat = this.getBestQualityDownloadFormat(videoInfo);
           this.playList[this.currentSong].videoDownloadLink = bestQualityFormat.videoDownloadLink;
