@@ -301,6 +301,72 @@ export class MusicPlayer {
   }
 
   /**
+   * Displays the playlist songs in a pretty format
+   * @param playlist Playlist object
+   */
+  showPlaylist(playlist?: {
+    videoId?: string,
+    videoDownloadLink?: string | null,
+    videoDownloadLinkExpiration?: number | null,
+    videoTitle: string,
+    videoDuration: string,
+    addedBy: string
+  }[]
+  ) {
+    let playList: { videoTitle: string, videoDuration: string, addedBy: string }[] = [];
+    if (playlist !== undefined) {
+      playList = playlist;
+    } else {
+      playList = this.playList;
+    }
+
+    if (playList.length !== 0) {
+      let playListEmbed = new Discord.MessageEmbed()
+        .setColor(util.colorGreen)
+        .setTitle('Listă de redare');
+
+      for (let i = 0; i < playList.length; i++) {
+        let newSong: string;
+        if (i === this.currentSong) {
+          newSong =
+            `**==================== [ MELODIA CURENTĂ ] ====================**\n` +
+            `**\`${i + 1}.\` ${Discord.Util.escapeMarkdown(playList[i].videoTitle)} ` +
+            `[${util.prettyPrintDuration(parseInt(playList[i].videoDuration, 10))}] ` +
+            `[<@${playList[i].addedBy}>]**\n` +
+            `**==========================================================**\n`;
+        } else {
+          newSong =
+            `\`${i + 1}.\` ${Discord.Util.escapeMarkdown(playList[i].videoTitle)} ` +
+            `**[${util.prettyPrintDuration(parseInt(playList[i].videoDuration, 10))}] ` +
+            `[<@${playList[i].addedBy}>]**\n`;
+        }
+
+        if (playListEmbed.description !== undefined) {
+          if (playListEmbed.description.length + newSong.length <= 2048) {
+            playListEmbed.setDescription(playListEmbed.description + newSong);
+          } else {
+            this.textChannel.send(playListEmbed);
+            playListEmbed = new Discord.MessageEmbed()
+              .setColor(util.colorGreen)
+              .setDescription(newSong);
+          }
+        } else {
+          playListEmbed.setDescription(newSong);
+        }
+      }
+
+      this.textChannel.send(
+        playListEmbed.setFooter(
+          `Număr melodii: ${playList.length} | ` +
+          `Durată: ${util.prettyPrintDuration(this.playlistDuration(playList))}`
+        ));
+
+    } else {
+      this.sendSimpleMessage('Lista de redare este goală!', 'notification');
+    }
+  }
+
+  /**
    * Checks if a video exists in the playlist
    * @param videoId YouTube video ID
    * @returns Whether the video exists in the playlist
@@ -460,6 +526,35 @@ export class MusicPlayer {
       }
     }
     return { isValid: true };
+  }
+
+  /**
+   * Gets the duration in seconds of a playlist
+   * @param playlist Playlist object
+   * @returns Duration of the playlist in seconds
+   */
+  private playlistDuration(playlist?: {
+    videoId?: string,
+    videoDownloadLink?: string | null,
+    videoDownloadLinkExpiration?: number | null,
+    videoTitle: string,
+    videoDuration: string,
+    addedBy: string
+  }[]
+  ) {
+    let playList: { videoTitle: string, videoDuration: string, addedBy: string }[] = [];
+    if (playlist !== undefined) {
+      playList = playlist;
+    } else {
+      playList = this.playList;
+    }
+
+    let duration = 0;
+    for (let i = 0; i < playList.length; i++) {
+      duration += parseInt(playList[i].videoDuration, 10);
+    }
+
+    return duration;
   }
 
   /**
