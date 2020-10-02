@@ -30,9 +30,9 @@ export class MusicPlayer {
      */
     videoTitle: string,
     /**
-     * YouTube video duration
+     * YouTube video duration in seconds
      */
-    videoDuration: string,
+    videoDuration: number,
     /**
      * Discord user ID of user that added the video to the playlist
      */
@@ -139,8 +139,8 @@ export class MusicPlayer {
               videoId: videoInfo.videoDetails.videoId,
               videoDownloadLink: bestQualityFormat.videoDownloadLink,
               videoDownloadLinkExpiration: bestQualityFormat.videoDownloadLinkExpiration,
-              videoTitle: videoInfo.videoDetails.title,
-              videoDuration: videoInfo.videoDetails.lengthSeconds,
+              videoTitle: Discord.Util.escapeMarkdown(videoInfo.videoDetails.title),
+              videoDuration: parseInt(videoInfo.videoDetails.lengthSeconds, 10),
               addedBy: addedBy,
             });
 
@@ -148,7 +148,7 @@ export class MusicPlayer {
               new Discord.MessageEmbed()
                 .setColor(util.colorGreen)
                 .setAuthor('Adăugare melodie')
-                .setTitle(Discord.Util.escapeMarkdown(videoInfo.videoDetails.title))
+                .setTitle(videoInfo.videoDetails.title)
                 .addFields({
                   name: 'Adăugat de',
                   value: `<@${addedBy}>`,
@@ -207,7 +207,7 @@ export class MusicPlayer {
           new Discord.MessageEmbed()
             .setColor(util.colorGreen)
             .setAuthor('În curs de redare...')
-            .setTitle('🎵🎵 ' + Discord.Util.escapeMarkdown(this.playList[songPosition].videoTitle) + ' 🎵🎵')
+            .setTitle('🎵🎵 ' + this.playList[songPosition].videoTitle + ' 🎵🎵')
             .addFields({
               name: 'Adăugat de',
               value: `<@${this.playList[songPosition].addedBy}>`,
@@ -309,11 +309,11 @@ export class MusicPlayer {
     videoDownloadLink?: string | null,
     videoDownloadLinkExpiration?: number | null,
     videoTitle: string,
-    videoDuration: string,
+    videoDuration: number,
     addedBy: string
   }[]
   ) {
-    let playList: { videoTitle: string, videoDuration: string, addedBy: string }[] = [];
+    let playList: { videoTitle: string, videoDuration: number, addedBy: string }[] = [];
     if (playlist !== undefined) {
       playList = playlist;
     } else {
@@ -330,14 +330,14 @@ export class MusicPlayer {
         if (i === this.currentSong) {
           newSong =
             `**==================== [ MELODIA CURENTĂ ] ====================**\n` +
-            `**\`${i + 1}.\` ${Discord.Util.escapeMarkdown(playList[i].videoTitle)} ` +
-            `[${util.prettyPrintDuration(parseInt(playList[i].videoDuration, 10))}] ` +
+            `**\`${i + 1}.\` ${playList[i].videoTitle} ` +
+            `[${util.prettyPrintDuration(playList[i].videoDuration)}] ` +
             `[<@${playList[i].addedBy}>]**\n` +
             `**==========================================================**\n`;
         } else {
           newSong =
-            `\`${i + 1}.\` ${Discord.Util.escapeMarkdown(playList[i].videoTitle)} ` +
-            `**[${util.prettyPrintDuration(parseInt(playList[i].videoDuration, 10))}] ` +
+            `\`${i + 1}.\` ${playList[i].videoTitle} ` +
+            `**[${util.prettyPrintDuration(playList[i].videoDuration)}] ` +
             `[<@${playList[i].addedBy}>]**\n`;
         }
 
@@ -538,11 +538,11 @@ export class MusicPlayer {
     videoDownloadLink?: string | null,
     videoDownloadLinkExpiration?: number | null,
     videoTitle: string,
-    videoDuration: string,
+    videoDuration: number,
     addedBy: string
   }[]
   ) {
-    let playList: { videoTitle: string, videoDuration: string, addedBy: string }[] = [];
+    let playList: { videoTitle: string, videoDuration: number, addedBy: string }[] = [];
     if (playlist !== undefined) {
       playList = playlist;
     } else {
@@ -551,7 +551,7 @@ export class MusicPlayer {
 
     let duration = 0;
     for (let i = 0; i < playList.length; i++) {
-      duration += parseInt(playList[i].videoDuration, 10);
+      duration += playList[i].videoDuration;
     }
 
     return duration;
