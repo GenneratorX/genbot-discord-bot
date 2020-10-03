@@ -370,7 +370,7 @@ export class MusicPlayer {
   /**
    * Displays the playlists stored in the database
    */
-  async showSavedPlaylists() {
+  static async showSavedPlaylists(textChannel: Discord.TextChannel) {
     const query = await db.query('SELECT playlist_name, created_by FROM playlist;');
     if (query.length > 0) {
       let playlistsEmbed = new Discord.MessageEmbed()
@@ -385,7 +385,7 @@ export class MusicPlayer {
           if (playlistsEmbed.description.length + playlist.length <= util.maxEmbedDescriptionLength) {
             playlistsEmbed.setDescription(playlistsEmbed.description + playlist);
           } else {
-            this.textChannel.send(playlistsEmbed);
+            textChannel.send(playlistsEmbed);
             playlistsEmbed = new Discord.MessageEmbed()
               .setColor(util.colorGreen)
               .setDescription(playlist);
@@ -395,11 +395,15 @@ export class MusicPlayer {
         }
       }
 
-      this.textChannel.send(
+      textChannel.send(
         playlistsEmbed.setFooter(`Număr liste de redare: ${query.length}`)
       );
     } else {
-      this.sendSimpleMessage('Nu există liste de redare salvate!', 'notification');
+      textChannel.send(
+        new Discord.MessageEmbed()
+          .setColor(util.colorBlue)
+          .setDescription('Nu există liste de redare salvate!')
+      );
     }
   }
 
