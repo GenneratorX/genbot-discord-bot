@@ -7,6 +7,7 @@ import childProcess = require('child_process');
 
 import env = require('./env');
 import util = require('./util');
+import db = require('./db');
 
 export class MusicPlayer {
   /**
@@ -304,7 +305,7 @@ export class MusicPlayer {
    * Displays the playlist songs in a pretty format
    * @param playlist Playlist object
    */
-  showPlaylist(playlist?: {
+  showPlaylistSongs(playlist?: {
     videoId?: string,
     videoDownloadLink?: string | null,
     videoDownloadLinkExpiration?: number | null,
@@ -342,7 +343,7 @@ export class MusicPlayer {
         }
 
         if (playListEmbed.description !== undefined) {
-          if (playListEmbed.description.length + newSong.length <= 2048) {
+          if (playListEmbed.description.length + newSong.length <= util.maxEmbedDescriptionLength) {
             playListEmbed.setDescription(playListEmbed.description + newSong);
           } else {
             this.textChannel.send(playListEmbed);
@@ -363,6 +364,42 @@ export class MusicPlayer {
 
     } else {
       this.sendSimpleMessage('Lista de redare este goală!', 'notification');
+    }
+  }
+
+  /**
+   * Displays the playlists stored in the database
+   */
+  async showSavedPlaylists() {
+    const query = await db.query('SELECT playlist_name, created_by FROM playlist;');
+    if (query.length > 0) {
+      let playlistsEmbed = new Discord.MessageEmbed()
+        .setColor(util.colorGreen)
+        .setTitle('Liste de redare');
+
+      for (let i = 0; i < query.length; i++) {
+        const playlist =
+          `\`${i + 1}.\` ${query[i].playlist_name} ` +
+          `**[<@${query[i].created_by}>]**\n`;
+        if (playlistsEmbed.description !== undefined) {
+          if (playlistsEmbed.description.length + playlist.length <= util.maxEmbedDescriptionLength) {
+            playlistsEmbed.setDescription(playlistsEmbed.description + playlist);
+          } else {
+            this.textChannel.send(playlistsEmbed);
+            playlistsEmbed = new Discord.MessageEmbed()
+              .setColor(util.colorGreen)
+              .setDescription(playlist);
+          }
+        } else {
+          playlistsEmbed.setDescription(playlist);
+        }
+      }
+
+      this.textChannel.send(
+        playlistsEmbed.setFooter(`Număr liste de redare: ${query.length}`)
+      );
+    } else {
+      this.sendSimpleMessage('Nu există liste de redare salvate!', 'notification');
     }
   }
 

@@ -3,6 +3,7 @@
 export const colorGreen = '#09776c';
 export const colorBlue = '#3098b8';
 export const colorRed = '#d3312e';
+export const maxEmbedDescriptionLength = 2048;
 
 /**
  * Splits a string after the first space
@@ -66,6 +67,6 @@ export function prettyPrintDuration(duration: number) {
  * Gets the current UNIX timestamp
  * @returns Current UNIX timestamp
  */
-export function unixTimestamp(): number {
+export function unixTimestamp() {
   return Math.floor(+new Date() / 1000);
 }
