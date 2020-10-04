@@ -180,6 +180,9 @@ export class MusicPlayer {
             case 'Video unavailable':
               this.sendSimpleMessage('Videoclipul introdus nu este disponibil! Încearcă alt link.', 'error');
               break;
+            case 'Could not find player config':
+              this.sendSimpleMessage('Nu am putut accesa videoclipul ... mai încearcă odată!', 'error');
+              break;
             default:
               console.log(error);
               this.sendSimpleMessage('Ceva nu a mers bine ... mai încearcă odată!', 'error');

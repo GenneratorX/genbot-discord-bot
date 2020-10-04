@@ -2,9 +2,9 @@
 
 import Discord = require('discord.js');
 
-export const colorGreen = '#09776c';
-export const colorBlue = '#3098b8';
-export const colorRed = '#d3312e';
+export const colorGreen = 620396;
+export const colorBlue = 3184824;
+export const colorRed = 13840686;
 export const maxEmbedDescriptionLength = 2048;
 
 /**
@@ -81,7 +81,7 @@ export function unixTimestamp() {
  */
 export function sendComplexMessage(
   message: {
-    color: string,
+    color: number,
     title: string,
     footer?: string,
     paragraph: string[]
