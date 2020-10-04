@@ -305,65 +305,40 @@ export class MusicPlayer {
   }
 
   /**
-   * Displays the playlist songs in a pretty format
+   * Displays the current playlist songs in a pretty format
    * @param playlist Playlist object
    */
-  showPlaylistSongs(playlist?: {
-    videoId?: string,
-    videoDownloadLink?: string | null,
-    videoDownloadLinkExpiration?: number | null,
-    videoTitle: string,
-    videoDuration: number,
-    addedBy: string
-  }[]
-  ) {
-    let playList: { videoTitle: string, videoDuration: number, addedBy: string }[] = [];
-    if (playlist !== undefined) {
-      playList = playlist;
-    } else {
-      playList = this.playList;
-    }
-
-    if (playList.length !== 0) {
-      let playListEmbed = new Discord.MessageEmbed()
-        .setColor(util.colorGreen)
-        .setTitle('Listă de redare');
-
-      for (let i = 0; i < playList.length; i++) {
-        let newSong: string;
+  showPlaylistSongs() {
+    if (this.playList.length !== 0) {
+      const songs: string[] = [];
+      let playListDuration = 0;
+      for (let i = 0; i < this.playList.length; i++) {
+        playListDuration += this.playList[i].videoDuration;
         if (i === this.currentSong) {
-          newSong =
+          songs.push(
             `**==================== [ MELODIA CURENTĂ ] ====================**\n` +
-            `**\`${i + 1}.\` ${playList[i].videoTitle} ` +
-            `[${util.prettyPrintDuration(playList[i].videoDuration)}] ` +
-            `[<@${playList[i].addedBy}>]**\n` +
-            `**==========================================================**\n`;
+            `**\`${i + 1}.\` ${this.playList[i].videoTitle} ` +
+            `[${util.prettyPrintDuration(this.playList[i].videoDuration)}] ` +
+            `[<@${this.playList[i].addedBy}>]**\n` +
+            `**==========================================================**\n`
+          );
         } else {
-          newSong =
-            `\`${i + 1}.\` ${playList[i].videoTitle} ` +
-            `**[${util.prettyPrintDuration(playList[i].videoDuration)}] ` +
-            `[<@${playList[i].addedBy}>]**\n`;
-        }
-
-        if (playListEmbed.description !== undefined) {
-          if (playListEmbed.description.length + newSong.length <= util.maxEmbedDescriptionLength) {
-            playListEmbed.setDescription(playListEmbed.description + newSong);
-          } else {
-            this.textChannel.send(playListEmbed);
-            playListEmbed = new Discord.MessageEmbed()
-              .setColor(util.colorGreen)
-              .setDescription(newSong);
-          }
-        } else {
-          playListEmbed.setDescription(newSong);
+          songs.push(
+            `\`${i + 1}.\` ${this.playList[i].videoTitle} ` +
+            `**[${util.prettyPrintDuration(this.playList[i].videoDuration)}] ` +
+            `[<@${this.playList[i].addedBy}>]**\n`
+          );
         }
       }
 
-      this.textChannel.send(
-        playListEmbed.setFooter(
-          `Număr melodii: ${playList.length} | ` +
-          `Durată: ${util.prettyPrintDuration(this.playlistDuration(playList))}`
-        ));
+      util.sendComplexMessage({
+        color: util.colorGreen,
+        title: 'Listă de redare',
+        footer:
+          `Număr melodii: ${this.playList.length} | ` +
+          `Durată: ${util.prettyPrintDuration(playListDuration)}`,
+        paragraph: songs,
+      }, this.textChannel);
 
     } else {
       this.sendSimpleMessage('Lista de redare este goală!', 'notification');
@@ -377,36 +352,24 @@ export class MusicPlayer {
   static async showSavedPlaylists(textChannel: Discord.TextChannel) {
     const query = await db.query('SELECT playlist_name, created_by FROM playlist;');
     if (query.length > 0) {
-      let playlistsEmbed = new Discord.MessageEmbed()
-        .setColor(util.colorGreen)
-        .setTitle('Liste de redare');
-
+      const playList: string[] = [];
       for (let i = 0; i < query.length; i++) {
-        const playlist =
-          `\`${i + 1}.\` ${query[i].playlist_name} ` +
-          `**[<@${query[i].created_by}>]**\n`;
-        if (playlistsEmbed.description !== undefined) {
-          if (playlistsEmbed.description.length + playlist.length <= util.maxEmbedDescriptionLength) {
-            playlistsEmbed.setDescription(playlistsEmbed.description + playlist);
-          } else {
-            textChannel.send(playlistsEmbed);
-            playlistsEmbed = new Discord.MessageEmbed()
-              .setColor(util.colorGreen)
-              .setDescription(playlist);
-          }
-        } else {
-          playlistsEmbed.setDescription(playlist);
-        }
+        playList.push(`\`${i + 1}.\` ${query[i].playlist_name} **[<@${query[i].created_by}>]**\n`);
       }
 
-      textChannel.send(
-        playlistsEmbed.setFooter(`Număr liste de redare: ${query.length}`)
-      );
+      util.sendComplexMessage({
+        color: util.colorGreen,
+        title: 'Liste de redare',
+        footer: `Număr liste de redare: ${query.length}`,
+        paragraph: playList,
+      }, textChannel);
+
     } else {
       textChannel.send(
-        new Discord.MessageEmbed()
-          .setColor(util.colorBlue)
-          .setDescription('Nu există liste de redare salvate!')
+        new Discord.MessageEmbed({
+          color: util.colorBlue,
+          description: 'Nu există liste de redare salvate!',
+        })
       );
     }
   }
@@ -493,16 +456,18 @@ export class MusicPlayer {
         }
 
         textChannel.send(
-          new Discord.MessageEmbed()
-            .setColor(util.colorBlue)
-            .setDescription(`**Există mai multe liste de redare cu nume similare:**\n${matches}`)
+          new Discord.MessageEmbed({
+            color: util.colorBlue,
+            description: `**Există mai multe liste de redare cu nume similare:**\n${matches}`,
+          })
         );
       }
     } else {
       textChannel.send(
-        new Discord.MessageEmbed()
-          .setColor(util.colorRed)
-          .setDescription('Nu există o listă de redare cu acel nume!')
+        new Discord.MessageEmbed({
+          color: util.colorRed,
+          description: 'Nu există o listă de redare cu acel nume!',
+        })
       );
     }
   }
@@ -670,35 +635,6 @@ export class MusicPlayer {
   }
 
   /**
-   * Gets the duration in seconds of a playlist
-   * @param playlist Playlist object
-   * @returns Duration of the playlist in seconds
-   */
-  private playlistDuration(playlist?: {
-    videoId?: string,
-    videoDownloadLink?: string | null,
-    videoDownloadLinkExpiration?: number | null,
-    videoTitle: string,
-    videoDuration: number,
-    addedBy: string
-  }[]
-  ) {
-    let playList: { videoTitle: string, videoDuration: number, addedBy: string }[] = [];
-    if (playlist !== undefined) {
-      playList = playlist;
-    } else {
-      playList = this.playList;
-    }
-
-    let duration = 0;
-    for (let i = 0; i < playList.length; i++) {
-      duration += playList[i].videoDuration;
-    }
-
-    return duration;
-  }
-
-  /**
    * Searches for saved playlists in the database by name
    * @param playlistName Playlist name
    * @returns Playlists that match the playlist name
@@ -740,9 +676,10 @@ export class MusicPlayer {
     }
 
     this.textChannel.send(
-      new Discord.MessageEmbed()
-        .setColor(messageColor)
-        .setDescription(message)
+      new Discord.MessageEmbed({
+        color: messageColor,
+        description: message,
+      })
     ).catch(error => {
       util.errorDisplay('MessageSend', error);
     });

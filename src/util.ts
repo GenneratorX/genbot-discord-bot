@@ -73,7 +73,6 @@ export function unixTimestamp() {
   return Math.floor(+new Date() / 1000);
 }
 
-
 /**
  * Sends a complex message to a text channel
  * @param message Message properties
