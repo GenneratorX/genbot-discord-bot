@@ -369,6 +369,7 @@ export class MusicPlayer {
 
   /**
    * Displays the playlists stored in the database
+   * @param textChannel Discord text channel
    */
   static async showSavedPlaylists(textChannel: Discord.TextChannel) {
     const query = await db.query('SELECT playlist_name, created_by FROM playlist;');
@@ -403,6 +404,102 @@ export class MusicPlayer {
         new Discord.MessageEmbed()
           .setColor(util.colorBlue)
           .setDescription('Nu există liste de redare salvate!')
+      );
+    }
+  }
+
+  /**
+   * Displays the songs of a saved playlist
+   * @param textChannel Discord text channel
+   * @param playlistName Playlist name
+   */
+  static async showSavedPlaylistSongs(textChannel: Discord.TextChannel, playlistName: string) {
+    const playlists = await MusicPlayer.searchSavedPlaylistsByName(playlistName);
+    if (playlists.length > 0) {
+      if (playlists.length === 1) {
+        textChannel.send(
+          new Discord.MessageEmbed({
+            color: util.colorBlue,
+            description:
+              `Am găsit o listă de redare cu numele **\`${playlists[0].playlistName}\`**. ` +
+              'Așteaptă un moment până încarc melodiile...',
+          })
+        );
+
+        const songs: { video_id: string, added_by: string }[] = await db.query(
+          'SELECT video_id, added_by FROM playlist_song WHERE playlist_id = $1;',
+          [playlists[0].playlistId]
+        );
+
+        const songInfo: Promise<ytdl.videoInfo>[] = [];
+        for (let i = 0; i < songs.length; i++) {
+          songInfo.push(ytdl.getBasicInfo(songs[i].video_id));
+        }
+
+        const allSongInfo = await Promise.allSettled(songInfo);
+
+        const playlist: string[] = [];
+        let playlistDuration = 0;
+        let failedSongCount = 0;
+
+        for (let i = 0; i < allSongInfo.length; i++) {
+          if (allSongInfo[i].status === 'fulfilled') {
+            const song = (allSongInfo[i] as PromiseFulfilledResult<ytdl.videoInfo>).value;
+            const duration = parseInt(song.videoDetails.lengthSeconds, 10);
+            playlistDuration += duration;
+            playlist.push(
+              `\`${i + 1}.\` [${Discord.Util.escapeMarkdown(song.videoDetails.title)}]` +
+              `(https://www.youtube.com/watch?v=${songs[i].video_id}) ` +
+              `**[${util.prettyPrintDuration(duration)}] ` +
+              `[<@${songs[i].added_by}>]**\n`
+            );
+          } else {
+            failedSongCount++;
+            let errorReason: string;
+            switch ((allSongInfo[i] as PromiseRejectedResult).reason.message) {
+              case 'This is a private video. Please sign in to verify that you may see it.':
+                errorReason = '**VIDEOCLIP PRIVAT**';
+                break;
+              case 'Video unavailable':
+                errorReason = '**VIDEOCLIP INDISPONIBIL**';
+                break;
+              case 'Could not find player config':
+                errorReason = '**EROARE LA OBȚINEREA VIDEOCLIPULUI**';
+                break;
+              default:
+                errorReason = '**EROARE GENERICĂ**';
+                console.log((allSongInfo[i] as PromiseRejectedResult).reason.message);
+            }
+            playlist.push(
+              `\`${i + 1}.\` [${errorReason}](https://www.youtube.com/watch?v=${songs[i].video_id}) ` +
+              `**[<@${songs[i].added_by}>]**\n`
+            );
+          }
+        }
+        util.sendComplexMessage({
+          color: util.colorGreen,
+          title: `${playlists[0].playlistName}`,
+          footer: `Număr melodii: ${songs.length} ${failedSongCount !== 0 ? `(${failedSongCount} valabile)` : ''} ` +
+            `| Durată: ${util.prettyPrintDuration(playlistDuration)}`,
+          paragraph: playlist,
+        }, textChannel);
+      } else {
+        let matches = '';
+        for (let i = 0; i < playlists.length; i++) {
+          matches += `\u25cf ${playlists[i].playlistName}\n`;
+        }
+
+        textChannel.send(
+          new Discord.MessageEmbed()
+            .setColor(util.colorBlue)
+            .setDescription(`**Există mai multe liste de redare cu nume similare:**\n${matches}`)
+        );
+      }
+    } else {
+      textChannel.send(
+        new Discord.MessageEmbed()
+          .setColor(util.colorRed)
+          .setDescription('Nu există o listă de redare cu acel nume!')
       );
     }
   }
@@ -596,6 +693,33 @@ export class MusicPlayer {
     }
 
     return duration;
+  }
+
+  /**
+   * Searches for saved playlists in the database by name
+   * @param playlistName Playlist name
+   * @returns Playlists that match the playlist name
+   */
+  private static async searchSavedPlaylistsByName(playlistName: string) {
+    const playlists: { playlistId: string, playlistName: string, createdBy: string }[] = await db.query(
+      'SELECT playlist_id "playlistId", playlist_name "playlistName", created_by "createdBy" ' +
+      'FROM playlist ' +
+      'WHERE playlist_name ILIKE $1;',
+      [`%${playlistName}%`]
+    );
+
+    let matchedPlaylist: { playlistId: string, playlistName: string, createdBy: string } | undefined;
+    for (let i = 0; i < playlists.length; i++) {
+      if (playlists[i].playlistName === playlistName) {
+        matchedPlaylist = playlists[i];
+        break;
+      }
+    }
+
+    if (matchedPlaylist !== undefined) {
+      return [matchedPlaylist];
+    }
+    return playlists;
   }
 
   /**

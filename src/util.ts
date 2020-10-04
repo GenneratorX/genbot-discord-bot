@@ -1,5 +1,7 @@
 'use strict';
 
+import Discord = require('discord.js');
+
 export const colorGreen = '#09776c';
 export const colorBlue = '#3098b8';
 export const colorRed = '#d3312e';
@@ -69,4 +71,37 @@ export function prettyPrintDuration(duration: number) {
  */
 export function unixTimestamp() {
   return Math.floor(+new Date() / 1000);
+}
+
+
+/**
+ * Sends a complex message to a text channel
+ * @param message Message properties
+ * @param textChannel Text channel to send to
+ */
+export function sendComplexMessage(
+  message: {
+    color: string,
+    title: string,
+    footer?: string,
+    paragraph: string[]
+  },
+  textChannel: Discord.TextChannel
+) {
+  let embed = new Discord.MessageEmbed({ color: message.color, title: message.title });
+  for (let i = 0; i < message.paragraph.length; i++) {
+    if (embed.description !== undefined) {
+      if (embed.description.length + message.paragraph[i].length <= maxEmbedDescriptionLength) {
+        embed.setDescription(embed.description + message.paragraph[i]);
+      } else {
+        textChannel.send(embed);
+        embed = new Discord.MessageEmbed({ color: message.color, description: message.paragraph[i] });
+      }
+    } else {
+      embed.setDescription(message.paragraph[i]);
+    }
+  }
+
+  embed.setFooter(message.footer);
+  textChannel.send(embed);
 }
