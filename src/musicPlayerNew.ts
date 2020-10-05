@@ -709,6 +709,28 @@ export class MusicPlayer {
   }
 
   /**
+   * Changes the current voice channel
+   * @param newVoiceChannel New Discord voice channel
+   */
+  updateVoiceChannel(newVoiceChannel: Discord.VoiceChannel) {
+    this.voiceChannel = newVoiceChannel;
+  }
+
+  /**
+   * Checks if there are any non bot users in the current voice channel and starts a leave timeout if there arent any
+   */
+  checkOnCurrentVoiceChannelUsers() {
+    if (this.voiceChannel.members.find(member => member.user.bot === false) === undefined) {
+      this.emptyVoiceChannelDisconnectTimer = setTimeout(() => {
+        this.dispose();
+        this.sendSimpleMessage('Am rămas singur ... așa că am ieșit!', 'notification');
+      }, 300000); // 5 minutes
+    } else {
+      clearTimeout(this.emptyVoiceChannelDisconnectTimer);
+    }
+  }
+
+  /**
    * Checks if a video exists in the playlist
    * @param videoId YouTube video ID
    * @returns Whether the video exists in the playlist
@@ -932,6 +954,13 @@ export class MusicPlayer {
   }
 
   /**
+   * Current voice channel
+   */
+  get currentVoiceChannel() {
+    return this.voiceChannel;
+  }
+
+  /**
    * Disposes the player object
    */
   private dispose() {
@@ -945,7 +974,7 @@ export class MusicPlayer {
     this.currentSong = -1;
     this.ready = false;
 
-    console.log(this.ready);
+    console.log('[DISPOSE]');
 
     clearTimeout(this.playlistEndDisconnectTimer);
     clearTimeout(this.emptyVoiceChannelDisconnectTimer);

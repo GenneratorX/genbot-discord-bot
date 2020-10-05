@@ -49,16 +49,14 @@ client.on('voiceStateUpdate', (oldState, newState) => {
   const oldUserChannel = oldState.channel;
   const newUserChannel = newState.channel;
 
-  if (musicPlayer !== undefined && oldUserChannel !== newUserChannel) {
+  if (musicPlayer !== undefined && musicPlayer.ready === true && oldUserChannel !== newUserChannel) {
     if (newState.id === (client.user as Discord.ClientUser).id) {
       if (newUserChannel !== null) {
-        musicPlayer.voiceChannel = newUserChannel as Discord.VoiceChannel;
+        musicPlayer.updateVoiceChannel(newUserChannel as Discord.VoiceChannel);
       }
     } else {
-      if (musicPlayer.voiceChannel.members.find(client => client.user.bot === false) !== undefined) {
-        musicPlayer.enableNoUsersDisconnectTimer(false);
-      } else {
-        musicPlayer.enableNoUsersDisconnectTimer();
+      if (musicPlayer.currentVoiceChannel === oldUserChannel || musicPlayer.currentVoiceChannel === newUserChannel) {
+        musicPlayer.checkOnCurrentVoiceChannelUsers();
       }
     }
   }
