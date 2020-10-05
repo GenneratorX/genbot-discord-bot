@@ -464,8 +464,10 @@ export class MusicPlayer {
         }
         util.sendComplexMessage({
           color: util.colorGreen,
-          title: `${playlists[0].playlistName}`,
-          footer: `Număr melodii: ${songs.length} ${failedSongCount !== 0 ? `(${failedSongCount} valabile)` : ''} ` +
+          title: `${Discord.Util.escapeMarkdown(playlists[0].playlistName)}`,
+          footer:
+            `Număr melodii: ${songs.length} ` +
+            `${failedSongCount !== 0 ? `(${songs.length - failedSongCount} valabile)` : ''} ` +
             `| Durată: ${util.prettyPrintDuration(playlistDuration)}`,
           paragraph: playlist,
         }, textChannel);
