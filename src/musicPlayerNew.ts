@@ -372,7 +372,9 @@ export class MusicPlayer {
     if (query.length > 0) {
       const playList: string[] = [];
       for (let i = 0; i < query.length; i++) {
-        playList.push(`\`${i + 1}.\` ${query[i].playlist_name} **[<@${query[i].created_by}>]**\n`);
+        playList.push(
+          `\`${i + 1}.\` ${Discord.Util.escapeMarkdown(query[i].playlist_name)} **[<@${query[i].created_by}>]**\n`
+        );
       }
 
       util.sendComplexMessage({
@@ -405,8 +407,8 @@ export class MusicPlayer {
           new Discord.MessageEmbed({
             color: util.colorBlue,
             description:
-              `Am găsit o listă de redare cu numele **\`${playlists[0].playlistName}\`**. ` +
-              'Așteaptă un moment până încarc melodiile...',
+              `Am găsit o listă de redare cu numele **${Discord.Util.escapeMarkdown(playlists[0].playlistName)}**` +
+              '. Așteaptă un moment până încarc melodiile...',
           })
         );
 
