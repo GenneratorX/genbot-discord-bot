@@ -520,7 +520,7 @@ export class MusicPlayer {
           }
 
           await db.query(insertQuery.slice(0, -1) + ';', insertParameters);
-          this.sendSimpleMessage(`Am salvat lista de redare cu numele '${playlistName}'.`, 'success');
+          this.sendSimpleMessage(`Am salvat lista de redare cu numele **\`${playlistName}\`**.`, 'success');
         } else {
           this.sendSimpleMessage('Există deja o listă de redare cu acest nume. Folosește alt nume!', 'error');
         }
@@ -531,6 +531,54 @@ export class MusicPlayer {
       this.sendSimpleMessage(
         'Nu cred că pot crea o listă de redare fără melodii. Adaugă una și după mai vorbim!',
         'error'
+      );
+    }
+  }
+
+  /**
+   * Deletes a playlist from the database
+   * @param textChannel Discord text channel
+   * @param playlistName Playlist name
+   */
+  static async deleteSavedPlaylist(textChannel: Discord.TextChannel, playlistName: string) {
+    if (playlistName.length > 0) {
+      const playlists = await MusicPlayer.searchSavedPlaylistsByName(playlistName);
+      if (playlists.length > 0) {
+        if (playlists.length === 1) {
+          await db.query('DELETE FROM playlist WHERE playlist_id = $1;', [playlists[0].playlistId]);
+          textChannel.send(
+            new Discord.MessageEmbed({
+              color: util.colorGreen,
+              description: `Am șters lista de redare cu numele **\`${playlists[0].playlistName}\`**.`,
+            })
+          );
+        } else {
+          let matches = '';
+          for (let i = 0; i < playlists.length; i++) {
+            matches += `\u25cf ${playlists[i].playlistName}\n`;
+          }
+  
+          textChannel.send(
+            new Discord.MessageEmbed({
+              color: util.colorBlue,
+              description: `**Există mai multe liste de redare cu nume similare:**\n${matches}`,
+            })
+          );
+        }
+      } else {
+        textChannel.send(
+          new Discord.MessageEmbed({
+            color: util.colorRed,
+            description: 'Nu există o listă de redare cu acel nume!',
+          })
+        );
+      }
+    } else {
+      textChannel.send(
+        new Discord.MessageEmbed({
+          color: util.colorRed,
+          description: 'Poate îmi spui și mie ce listă de redare vrei să ștergi.',
+        })
       );
     }
   }
