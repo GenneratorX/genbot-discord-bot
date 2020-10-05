@@ -120,7 +120,9 @@ export class MusicPlayer {
       if (playList.video !== undefined) {
         this.addSong(playList.video.youtubeLink, playList.video.addedBy)
           .then(() => {
-            this.ready = true;
+            if (this.playList.length !== 0) {
+              this.ready = true;
+            }
             MusicPlayer.lockMusicPlayerCreation = false;
           });
       } else {
