@@ -51,6 +51,11 @@ export class MusicPlayer {
   private ready: boolean;
 
   /**
+   * Song loading queue
+   */
+  private loadingQueue: string[];
+
+  /**
    * Current text channel
    */
   private textChannel: Discord.TextChannel;
@@ -105,6 +110,7 @@ export class MusicPlayer {
     this.currentSong = -1;
 
     this.ready = false;
+    this.loadingQueue = [];
 
     this.playlistEndDisconnectTimer = setTimeout(() => { }, 1);
     this.emptyVoiceChannelDisconnectTimer = setTimeout(() => { }, 1);
@@ -130,63 +136,70 @@ export class MusicPlayer {
    */
   async addSong(youtubeLink: string, addedBy: string) {
     if (ytdl.validateURL(youtubeLink) === true) {
-      if (this.alreadyExists(ytdl.getVideoID(youtubeLink)) === false) {
-        try {
-          const videoInfo = await ytdl.getInfo(youtubeLink);
-          if (videoInfo.player_response.playabilityStatus.status === 'OK') {
-            const bestQualityFormat = this.getBestQualityDownloadFormat(videoInfo);
+      const youtubeVideoId = ytdl.getVideoID(youtubeLink);
+      if (this.alreadyExists(youtubeVideoId) === false) {
+        if (this.loadingQueue.includes(youtubeVideoId) === false) {
+          this.loadingQueue.push(youtubeVideoId);
+          try {
+            const videoInfo = await ytdl.getInfo(youtubeLink);
+            if (videoInfo.player_response.playabilityStatus.status === 'OK') {
+              const bestQualityFormat = this.getBestQualityDownloadFormat(videoInfo);
 
-            this.playList.push({
-              videoId: videoInfo.videoDetails.videoId,
-              videoDownloadLink: bestQualityFormat.videoDownloadLink,
-              videoDownloadLinkExpiration: bestQualityFormat.videoDownloadLinkExpiration,
-              videoTitle: Discord.Util.escapeMarkdown(videoInfo.videoDetails.title),
-              videoDuration: parseInt(videoInfo.videoDetails.lengthSeconds, 10),
-              addedBy: addedBy,
-            });
+              this.playList.push({
+                videoId: videoInfo.videoDetails.videoId,
+                videoDownloadLink: bestQualityFormat.videoDownloadLink,
+                videoDownloadLinkExpiration: bestQualityFormat.videoDownloadLinkExpiration,
+                videoTitle: Discord.Util.escapeMarkdown(videoInfo.videoDetails.title),
+                videoDuration: parseInt(videoInfo.videoDetails.lengthSeconds, 10),
+                addedBy: addedBy,
+              });
 
-            this.textChannel.send(
-              new Discord.MessageEmbed()
-                .setColor(util.colorGreen)
-                .setAuthor('Adăugare melodie')
-                .setTitle(videoInfo.videoDetails.title)
-                .addFields({
-                  name: 'Adăugat de',
-                  value: `<@${addedBy}>`,
-                  inline: true,
-                }, {
-                  name: 'Durata',
-                  value: util.prettyPrintDuration(parseInt(videoInfo.videoDetails.lengthSeconds, 10)),
-                  inline: true,
-                }, {
-                  name: 'Poziție',
-                  value: this.playList.length,
-                  inline: true,
-                })
-            );
+              this.textChannel.send(
+                new Discord.MessageEmbed()
+                  .setColor(util.colorGreen)
+                  .setAuthor('Adăugare melodie')
+                  .setTitle(videoInfo.videoDetails.title)
+                  .addFields({
+                    name: 'Adăugat de',
+                    value: `<@${addedBy}>`,
+                    inline: true,
+                  }, {
+                    name: 'Durata',
+                    value: util.prettyPrintDuration(parseInt(videoInfo.videoDetails.lengthSeconds, 10)),
+                    inline: true,
+                  }, {
+                    name: 'Poziție',
+                    value: this.playList.length,
+                    inline: true,
+                  })
+              );
 
-            if (this.currentSong === -1) {
-              this.playSong(this.playList.length - 1);
-            }
+              if (this.currentSong === -1) {
+                this.playSong(this.playList.length - 1);
+              }
 
-          } else {
-            this.sendSimpleMessage('Videoclipul introdus nu este disponibil! Încearcă alt link.', 'error');
-          }
-        } catch (error) {
-          switch (error.message) {
-            case 'This is a private video. Please sign in to verify that you may see it.':
-              this.sendSimpleMessage('Videoclipul introdus este privat! Încearcă alt link.', 'error');
-              break;
-            case 'Video unavailable':
+            } else {
               this.sendSimpleMessage('Videoclipul introdus nu este disponibil! Încearcă alt link.', 'error');
-              break;
-            case 'Could not find player config':
-              this.sendSimpleMessage('Nu am putut accesa videoclipul ... mai încearcă odată!', 'error');
-              break;
-            default:
-              console.log(error);
-              this.sendSimpleMessage('Ceva nu a mers bine ... mai încearcă odată!', 'error');
+            }
+          } catch (error) {
+            switch (error.message) {
+              case 'This is a private video. Please sign in to verify that you may see it.':
+                this.sendSimpleMessage('Videoclipul introdus este privat! Încearcă alt link.', 'error');
+                break;
+              case 'Video unavailable':
+                this.sendSimpleMessage('Videoclipul introdus nu este disponibil! Încearcă alt link.', 'error');
+                break;
+              case 'Could not find player config':
+                this.sendSimpleMessage('Nu am putut accesa videoclipul ... mai încearcă odată!', 'error');
+                break;
+              default:
+                console.log(error);
+                this.sendSimpleMessage('Ceva nu a mers bine ... mai încearcă odată!', 'error');
+            }
           }
+          this.loadingQueue.splice(this.loadingQueue.indexOf(youtubeVideoId), 1);
+        } else {
+          this.sendSimpleMessage('Videoclipul introdus este în curs de încărcare. Așteptă și tu puțin!', 'error');
         }
       } else {
         this.sendSimpleMessage('Videoclipul introdus există deja în lista de redare!', 'error');
