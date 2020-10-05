@@ -779,7 +779,9 @@ export class MusicPlayer {
       this.voiceConnection.voice.setSelfDeaf(true);
 
       this.voiceConnection.on('disconnect', () => {
-        this.dispose();
+        if (this.ready === true) {
+          this.dispose();
+        }
       });
 
       this.voiceConnection.on('error', error => {
@@ -964,19 +966,19 @@ export class MusicPlayer {
    * Disposes the player object
    */
   private dispose() {
+    this.ready = false;
+    this.voiceChannel.leave();
+
     if (this.ffmpegEncoder !== undefined) {
       this.ffmpegEncoder.kill();
     }
 
-    this.voiceChannel.leave();
-
     this.playList = [];
     this.currentSong = -1;
-    this.ready = false;
-
-    console.log('[DISPOSE]');
 
     clearTimeout(this.playlistEndDisconnectTimer);
     clearTimeout(this.emptyVoiceChannelDisconnectTimer);
+
+    console.log('[DISPOSE]');
   }
 }
