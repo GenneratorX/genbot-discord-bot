@@ -48,7 +48,7 @@ export class MusicPlayer {
   /**
    * Whether the player is ready
    */
-  private ready: boolean;
+  public ready: boolean;
 
   /**
    * Song loading queue
@@ -481,6 +481,54 @@ export class MusicPlayer {
           color: util.colorRed,
           description: 'Nu există o listă de redare cu acel nume!',
         })
+      );
+    }
+  }
+
+  /**
+   * Saves the current playlist to the database
+   * @param playlistName Playlist name
+   * @param playlistCreator Discord user ID of user that created the playlist
+   */
+  async savePlaylist(playlistName: string, playlistCreator: string) {
+    if (this.playList.length > 0) {
+      if (playlistName.length >= 3 && playlistName.length <= 50) {
+        const playlistSearch = await db.query(
+          'SELECT playlist_name FROM playlist WHERE LOWER(playlist_name) = LOWER($1);',
+          [playlistName]
+        );
+        if (playlistSearch.length === 0) {
+          const playlistCreate: { playlist_id: string }[] = await db.query(
+            'INSERT INTO playlist VALUES (DEFAULT, $1, $2, DEFAULT) RETURNING playlist_id;',
+            [playlistName, playlistCreator]
+          );
+          const newPlaylistId = playlistCreate[0].playlist_id;
+
+          let insertQuery = 'INSERT INTO playlist_song VALUES ';
+          const insertParameters: string[] = [];
+
+          let j = 1;
+          for (let i = 0; i < this.playList.length; i++) {
+            insertQuery += `($${j++}, $${j++}, $${j++}),`;
+            insertParameters.push(
+              newPlaylistId,
+              this.playList[i].videoId,
+              this.playList[i].addedBy
+            );
+          }
+
+          await db.query(insertQuery.slice(0, -1) + ';', insertParameters);
+          this.sendSimpleMessage(`Am salvat lista de redare cu numele '${playlistName}'.`, 'success');
+        } else {
+          this.sendSimpleMessage('Există deja o listă de redare cu acest nume. Folosește alt nume!', 'error');
+        }
+      } else {
+        this.sendSimpleMessage('Numele listei de redare trebuie să conțină între 3 și 50 caractere!', 'error');
+      }
+    } else {
+      this.sendSimpleMessage(
+        'Nu cred că pot crea o listă de redare fără melodii. Adaugă una și după mai vorbim!',
+        'error'
       );
     }
   }
