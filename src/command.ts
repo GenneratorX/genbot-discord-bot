@@ -6,7 +6,7 @@ import env = require('./env');
 import bot = require('./bot');
 import util = require('./util');
 
-import { MusicPlayer } from './musicPlayerNew';
+import { MusicPlayer } from './musicPlayer';
 
 export let musicPlayer: MusicPlayer;
 
