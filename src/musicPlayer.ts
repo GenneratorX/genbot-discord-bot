@@ -223,17 +223,18 @@ export class MusicPlayer {
    */
   async playSong(songPosition: number) {
     if (this.playList[songPosition] !== undefined) {
+      clearTimeout(this.playlistEndDisconnectTimer);
       this.currentSong = songPosition;
       try {
         await this.createVoiceConnection();
         this.createStreamDispatcher();
 
         this.textChannel.send(
-          new Discord.MessageEmbed()
-            .setColor(util.colorGreen)
-            .setAuthor('În curs de redare...')
-            .setTitle('🎵🎵 ' + this.playList[songPosition].videoTitle + ' 🎵🎵')
-            .addFields({
+          new Discord.MessageEmbed({
+            color: util.colorGreen,
+            author: { name: 'În curs de redare...' },
+            title: `🎵🎵 ${this.playList[songPosition].videoTitle} 🎵🎵`,
+            fields: [{
               name: 'Adăugat de',
               value: `<@${this.playList[songPosition].addedBy}>`,
               inline: true,
@@ -241,7 +242,8 @@ export class MusicPlayer {
               name: 'Link YouTube',
               value: `https://www.youtube.com/watch?v=${this.playList[songPosition].videoId}`,
               inline: true,
-            })
+            }],
+          })
         );
 
       } catch (error) {
