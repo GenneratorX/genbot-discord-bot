@@ -149,34 +149,37 @@ export class MusicPlayer {
             const videoInfo = await ytdl.getInfo(youtubeLink);
             if (videoInfo.player_response.playabilityStatus.status === 'OK') {
               const bestQualityFormat = this.getBestQualityDownloadFormat(videoInfo);
+              const videoTitle = Discord.Util.escapeMarkdown(videoInfo.videoDetails.title);
+              const videoDuration = parseInt(videoInfo.videoDetails.lengthSeconds, 10);
 
               this.playList.push({
                 videoId: videoInfo.videoDetails.videoId,
                 videoDownloadLink: bestQualityFormat.videoDownloadLink,
                 videoDownloadLinkExpiration: bestQualityFormat.videoDownloadLinkExpiration,
-                videoTitle: Discord.Util.escapeMarkdown(videoInfo.videoDetails.title),
-                videoDuration: parseInt(videoInfo.videoDetails.lengthSeconds, 10),
+                videoTitle: videoTitle,
+                videoDuration: videoDuration,
                 addedBy: addedBy,
               });
 
               this.textChannel.send(
-                new Discord.MessageEmbed()
-                  .setColor(util.colorGreen)
-                  .setAuthor('Adăugare melodie')
-                  .setTitle(videoInfo.videoDetails.title)
-                  .addFields({
+                new Discord.MessageEmbed({
+                  color: util.colorGreen,
+                  author: { name: 'Adăugare melodie' },
+                  title: videoTitle,
+                  fields: [{
                     name: 'Adăugat de',
                     value: `<@${addedBy}>`,
                     inline: true,
                   }, {
                     name: 'Durata',
-                    value: util.prettyPrintDuration(parseInt(videoInfo.videoDetails.lengthSeconds, 10)),
+                    value: util.prettyPrintDuration(videoDuration),
                     inline: true,
                   }, {
                     name: 'Poziție',
                     value: this.playList.length,
                     inline: true,
-                  })
+                  }],
+                })
               );
 
               if (this.currentSong === -1) {
