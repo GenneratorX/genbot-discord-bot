@@ -4,8 +4,9 @@ import Discord = require('discord.js');
 
 import env = require('./env');
 import bot = require('./bot');
+import util = require('./util');
 
-import { MusicPlayer } from './musicPlayer';
+import { MusicPlayer } from './musicPlayerNew';
 
 export let musicPlayer: MusicPlayer;
 
@@ -75,14 +76,14 @@ export const commands: Commands[] = [
 
 /**
  * Parses a user message
- * @param message Discord message object
+ * @param message Discord message
  */
 export function onMessage(message: Discord.Message) {
   if (message.content.charAt(0) === env.BOT_PREFIX) {
     if (message.author.bot === false) {
       if (bot.textChannels.includes(message.channel.id) === true) {
         const trimmedMessage = message.content.replace(/\s+/g, ' ');
-        const cutString = splitAfterFirstSpace(trimmedMessage.substring(1));
+        const cutString = util.splitAfterFirstSpace(trimmedMessage.substring(1));
 
         const lowercaseCommand = cutString.beforeSpace.toLowerCase();
 
@@ -100,7 +101,7 @@ export function onMessage(message: Discord.Message) {
 
         if (matchedCommands.length === 1) {
           if (matchedCommands[0].subCommands !== undefined && matchedCommands[0].subCommands.length > 0) {
-            const cutString2 = splitAfterFirstSpace(cutString.afterSpace);
+            const cutString2 = util.splitAfterFirstSpace(cutString.afterSpace);
 
             const lowercaseSubCommand = cutString2.beforeSpace.toLowerCase();
 
@@ -138,10 +139,11 @@ export function onMessage(message: Discord.Message) {
             matchedCommands[0].function(message, cutString.afterSpace);
           }
         } else {
-          const embed = new Discord.MessageEmbed()
-            .setColor('#FF0000')
-            .setTitle('Nu am auzit de comanda aia!')
-            .setDescription('');
+          const embed = new Discord.MessageEmbed({
+            color: util.colorRed,
+            title: 'Nu am auzit de comanda aia!',
+            description: '',
+          });
 
           if (matchedCommands.length !== 0) {
             let matchedCommandsText = '';
@@ -159,7 +161,7 @@ export function onMessage(message: Discord.Message) {
 }
 
 /**
- * Checks if user command is play or pause
+ * Checks if the user command is 'play' or 'pause'
  * @param message Discord message
  * @param lastParameter Command last parameter
  */
@@ -167,8 +169,8 @@ function commandPlayPause(message: Discord.Message, lastParameter: string) {
   if (lastParameter.length > 0) {
     commandPlay(message, lastParameter);
   } else {
-    if (musicPlayer !== undefined) {
-      if (musicPlayer.isplaying === true) {
+    if (musicPlayer !== undefined && musicPlayer.ready === true) {
+      if (musicPlayer.paused === false) {
         musicPlayer.pause();
       } else {
         musicPlayer.unpause();
@@ -178,12 +180,12 @@ function commandPlayPause(message: Discord.Message, lastParameter: string) {
 }
 
 /**
- * Plays/unpauses current playing song
+ * Plays/unpauses the current playing song
  * @param message Discord message
  * @param lastParameter Command last parameter
  */
 function commandPlay(message: Discord.Message, lastParameter: string) {
-  if (musicPlayer !== undefined) {
+  if (musicPlayer !== undefined && musicPlayer.ready === true) {
     if (lastParameter.length > 0) {
       musicPlayer.addSong(lastParameter, message.author.id);
     } else {
@@ -193,16 +195,21 @@ function commandPlay(message: Discord.Message, lastParameter: string) {
     if (lastParameter.length > 0) {
       if (message.member !== null && message.member.voice.channel !== null) {
         musicPlayer = new MusicPlayer(
-          lastParameter,
-          message.author.id,
           message.channel as Discord.TextChannel,
-          message.member.voice.channel
+          message.member.voice.channel,
+          {
+            video: {
+              youtubeLink: lastParameter,
+              addedBy: message.author.id,
+            },
+          }
         );
       } else {
         message.channel.send(
-          new Discord.MessageEmbed()
-            .setColor('#FF0000')
-            .setTitle('Intră într-o cameră de voce că altfel o să ascult melodia singur!')
+          new Discord.MessageEmbed({
+            color: util.colorRed,
+            title: 'Intră într-o cameră de voce că altfel o să ascult melodia singur!',
+          })
         );
       }
     }
@@ -210,41 +217,41 @@ function commandPlay(message: Discord.Message, lastParameter: string) {
 }
 
 /**
- * Pauses current playing song
+ * Pauses the current playing song
  * @param message Discord message
  * @param lastParameter Command last parameter
  */
 function commandPause() {
-  if (musicPlayer !== undefined) {
+  if (musicPlayer !== undefined && musicPlayer.ready === true) {
     musicPlayer.pause();
   }
 }
 
 /**
- * Skips current playing song
+ * Skips the current playing song
  */
 function commandSkip() {
-  if (musicPlayer !== undefined) {
-    musicPlayer.skipSong();
+  if (musicPlayer !== undefined && musicPlayer.ready === true) {
+    musicPlayer.skip();
   }
 }
 
 /**
- * Displays song queue
+ * Displays the current playlist songs
  */
 function commandQueue() {
-  if (musicPlayer !== undefined) {
-    musicPlayer.displaySongQueue();
+  if (musicPlayer !== undefined && musicPlayer.ready === true) {
+    musicPlayer.showPlaylistSongs();
   }
 }
 
 /**
- * Removes a song from song queue
+ * Removes a song from the current playlist
  * @param message Discord message
  * @param lastParameter Command last parameter
  */
 function commandRemove(message: Discord.Message, lastParameter: string) {
-  if (musicPlayer !== undefined) {
+  if (musicPlayer !== undefined && musicPlayer.ready === true) {
     musicPlayer.removeSong(parseInt(lastParameter, 10) - 1);
   }
 }
@@ -255,71 +262,85 @@ function commandRemove(message: Discord.Message, lastParameter: string) {
  * @param lastParameter Command last parameter
  */
 function commandPlaylist(message: Discord.Message, lastParameter: string) {
-  if (musicPlayer !== undefined) {
-    if (lastParameter.length > 0) {
-      musicPlayer.showPlaylistSongs(lastParameter);
-    } else {
-      musicPlayer.showPlaylists();
-    }
+  if (lastParameter.length > 0) {
+    MusicPlayer.showSavedPlaylistSongs(message.channel as Discord.TextChannel, lastParameter);
+  } else {
+    MusicPlayer.showSavedPlaylists(message.channel as Discord.TextChannel);
   }
 }
 
 /**
- * Saves a playlists to database
+ * Saves a playlist to the database
  * @param message Discord message
  * @param lastParameter Command last parameter
  */
 function commandPlaylistSave(message: Discord.Message, lastParameter: string) {
-  if (musicPlayer !== undefined) {
+  if (musicPlayer !== undefined && musicPlayer.ready === true) {
     musicPlayer.savePlaylist(lastParameter, message.author.id);
   }
 }
 
 /**
- * Loads a playlists from database
+ * Loads a playlist from the database
  * @param message Discord message
  * @param lastParameter Command last parameter
  */
 function commandPlaylistLoad(message: Discord.Message, lastParameter: string) {
-  if (musicPlayer !== undefined) {
-    musicPlayer.loadPlaylist(lastParameter);
+  if (musicPlayer !== undefined && musicPlayer.ready === true) {
+    musicPlayer.loadSavedPlaylist(lastParameter);
+  } else {
+    if (message.member !== null && message.member.voice.channel !== null) {
+      musicPlayer = new MusicPlayer(
+        message.channel as Discord.TextChannel,
+        message.member.voice.channel,
+        {
+          playlistName: lastParameter,
+        }
+      );
+    } else {
+      message.channel.send(
+        new Discord.MessageEmbed({
+          color: util.colorRed,
+          title: 'Intră într-o cameră de voce că altfel o să ascult melodiile singur!',
+        })
+      );
+    }
   }
 }
 
 /**
- * Deletes a playlists from database
+ * Deletes a playlist from the database
  * @param message Discord message
  * @param lastParameter Command last parameter
  */
 function commandPlaylistDelete(message: Discord.Message, lastParameter: string) {
-  if (musicPlayer !== undefined) {
-    musicPlayer.removePlaylist(lastParameter);
-  }
+  MusicPlayer.deleteSavedPlaylist((message.channel as Discord.TextChannel), lastParameter);
 }
 
 /**
- * Displays bot latency
+ * Displays the bot latency
  * @param message Discord message
  */
 function commandLatency(message: Discord.Message) {
   message.channel.send(
-    new Discord.MessageEmbed()
-      .setColor('#0000FF')
-      .setDescription(`**Latență (Bot - Server Discord):** ${bot.client.ws.ping}ms`)
+    new Discord.MessageEmbed({
+      color: util.colorBlue,
+      description: `**Latență (Bot - Server Discord):** ${bot.client.ws.ping}ms`,
+    })
   );
 }
 
 /**
- * Displays bot info
+ * Displays the bot info
  * @param message Discord message
  */
 function commandAbout(message: Discord.Message) {
   message.channel.send(
-    new Discord.MessageEmbed()
-      .setColor('#0000FF')
-      .setTitle('Despre')
-      .setDescription('Bot de muzică destinat __exclusiv__ comunității **BOOSTED SHITZ**!')
-      .addFields({
+    new Discord.MessageEmbed({
+      color: util.colorBlue,
+      title: 'Despre',
+      description: 'Bot de muzică destinat comunității **BOOSTED SHITZ**!',
+      fields: [{
         name: 'Dezvoltator',
         value: '<@242758294525968388>',
         inline: true,
@@ -334,7 +355,8 @@ function commandAbout(message: Discord.Message) {
       }, {
         name: '**Codul sursă este disponibil la adresa**',
         value: 'https://github.com/GenneratorX/genbot-discord-bot',
-      })
+      }],
+    })
   );
 }
 
@@ -344,14 +366,14 @@ function commandAbout(message: Discord.Message) {
  */
 function commandHelp(message: Discord.Message) {
   message.channel.send(
-    new Discord.MessageEmbed()
-      .setColor('#0000FF')
-      .setTitle('Pagină comenzi bot')
-      .setDescription('Funcționalitățile bot-ului sunt descrise prin combinații *comandă*-*parametrii*.\n' +
+    new Discord.MessageEmbed({
+      color: util.colorBlue,
+      title: 'Pagină comenzi bot',
+      description:
+        'Funcționalitățile bot-ului sunt descrise prin combinații *comandă*-*parametrii*.\n' +
         ' * Parametrii obligatorii sunt marcați sub forma ** *<parametru>* **\n' +
-        ' * Parametrii opționali sunt marcați sub forma ** *[parametru]* **'
-      )
-      .addFields({
+        ' * Parametrii opționali sunt marcați sub forma ** *[parametru]* **',
+      fields: [{
         name: `\`1.\` **${env.BOT_PREFIX}play / ${env.BOT_PREFIX}p *[link YouTube]* **`,
         value: 'Redă sunetul din videoclipul introdus sau pornește redarea sunetului dacă acesta a fost oprit',
       }, {
@@ -386,27 +408,7 @@ function commandHelp(message: Discord.Message) {
       }, {
         name: `\`0.\` **${env.BOT_PREFIX}about / ${env.BOT_PREFIX}despre**`,
         value: 'Afișează informații despre bot',
-      })
+      }],
+    })
   );
-}
-
-/**
- * Splits a string after the first space
- * @param string String to split
- * @returns Object containing two strings
- */
-function splitAfterFirstSpace(string: string) {
-  const firstSpaceIndex = string.indexOf(' ');
-
-  if (firstSpaceIndex !== -1) {
-    return {
-      beforeSpace: string.substring(0, firstSpaceIndex),
-      afterSpace: string.substring(firstSpaceIndex + 1),
-    };
-  }
-
-  return {
-    beforeSpace: string,
-    afterSpace: '',
-  };
 }
