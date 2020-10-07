@@ -834,9 +834,7 @@ export class MusicPlayer {
       this.streamDispatcher.on('finish', () => {
         console.log('  [SONG END]');
 
-        if (this.ffmpegEncoder !== undefined) {
-          this.ffmpegEncoder.kill();
-        }
+        this.killFFmpegEncoder();
 
         if (this.playList[this.currentSong] !== undefined) {
           this.playList[this.currentSong].videoDownloadLink = null;
@@ -850,9 +848,7 @@ export class MusicPlayer {
         console.log(error);
         this.sendSimpleMessage('Ceva nu a mers bine la redarea videoclipului ... trec la următoarul!', 'error');
 
-        if (this.ffmpegEncoder !== undefined) {
-          this.ffmpegEncoder.kill();
-        }
+        this.killFFmpegEncoder();
 
         this.playList[this.currentSong].videoDownloadLink = null;
         this.playList[this.currentSong].videoDownloadLinkExpiration = null;
@@ -952,6 +948,15 @@ export class MusicPlayer {
   }
 
   /**
+   * Kills the ffmpeg encoder child process
+   */
+  private killFFmpegEncoder() {
+    if (this.ffmpegEncoder !== undefined) {
+      this.ffmpegEncoder.kill('SIGKILL');
+    }
+  }
+
+  /**
    * Whether the player is paused
    */
   get paused() {
@@ -975,9 +980,7 @@ export class MusicPlayer {
     this.ready = false;
     this.voiceChannel.leave();
 
-    if (this.ffmpegEncoder !== undefined) {
-      this.ffmpegEncoder.kill();
-    }
+    this.killFFmpegEncoder();
 
     this.playList = [];
     this.currentSong = -1;
