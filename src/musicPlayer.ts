@@ -312,9 +312,9 @@ export class MusicPlayer {
 
       if (this.currentSong === songPosition) {
         this.currentSong--;
+        (this.streamDispatcher as Discord.StreamDispatcher).end();
       }
 
-      (this.streamDispatcher as Discord.StreamDispatcher).end();
       this.sendSimpleMessage(`Am șters melodia aflată pe poziția **\`${songPosition + 1}\`** !`, 'success');
     } else {
       if (isNaN(songPosition) === false) {
