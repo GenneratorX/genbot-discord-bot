@@ -814,6 +814,7 @@ export class MusicPlayer {
          * Using WEBM instead of Opus because Opus gives `Error: Did not find the EBML tag at the start of the stream`
          * if it is used in combination with `type: webm/opus` stream option
          */
+        '-vn',
         '-f', 'webm',
         '-b:a', this.voiceChannel.bitrate.toString(),
         '-compression_level', '10',
