@@ -82,7 +82,7 @@ export const commands: Commands[] = [
  * @param message Discord message
  */
 export function onMessage(message: Discord.Message) {
-  if (message.content.charAt(0) === env.BOT_PREFIX) {
+  if (message.content.charAt(0) === env.BOT_PREFIX && message.content.length > 1) {
     if (message.author.bot === false) {
       if (bot.textChannels.includes(message.channel.id) === true) {
         const trimmedMessage = message.content.replace(/\s+/g, ' ');
