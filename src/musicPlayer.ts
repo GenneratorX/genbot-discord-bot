@@ -548,11 +548,11 @@ export class MusicPlayer {
   }
 
   /**
-   * Deletes a playlist from the database
+   * Removes a playlist from the database
    * @param textChannel Discord text channel
    * @param playlistName Playlist name
    */
-  static async deleteSavedPlaylist(textChannel: Discord.TextChannel, playlistName: string) {
+  static async removeSavedPlaylist(textChannel: Discord.TextChannel, playlistName: string) {
     if (playlistName.length > 0) {
       const playlists = await MusicPlayer.searchSavedPlaylistsByName(playlistName);
       if (playlists.length > 0) {

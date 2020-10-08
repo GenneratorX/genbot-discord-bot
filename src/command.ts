@@ -58,8 +58,11 @@ export const commands: Commands[] = [
         name: 'load',
         function: commandPlaylistLoad,
       }, {
-        name: 'delete',
-        function: commandPlaylistDelete,
+        name: 'remove',
+        function: commandPlaylistRemove,
+      }, {
+        name: 'display',
+        function: commandPlaylistDisplay,
       }
     ],
   }, {
@@ -261,12 +264,8 @@ function commandRemove(message: Discord.Message, lastParameter: string) {
  * @param message Discord message
  * @param lastParameter Command last parameter
  */
-function commandPlaylist(message: Discord.Message, lastParameter: string) {
-  if (lastParameter.length > 0) {
-    MusicPlayer.showSavedPlaylistSongs(message.channel as Discord.TextChannel, lastParameter);
-  } else {
-    MusicPlayer.showSavedPlaylists(message.channel as Discord.TextChannel);
-  }
+function commandPlaylist(message: Discord.Message) {
+  MusicPlayer.showSavedPlaylists(message.channel as Discord.TextChannel);
 }
 
 /**
@@ -313,8 +312,19 @@ function commandPlaylistLoad(message: Discord.Message, lastParameter: string) {
  * @param message Discord message
  * @param lastParameter Command last parameter
  */
-function commandPlaylistDelete(message: Discord.Message, lastParameter: string) {
-  MusicPlayer.deleteSavedPlaylist((message.channel as Discord.TextChannel), lastParameter);
+function commandPlaylistRemove(message: Discord.Message, lastParameter: string) {
+  MusicPlayer.removeSavedPlaylist((message.channel as Discord.TextChannel), lastParameter);
+}
+
+/**
+ * Displays a saved playlist
+ * @param message Discord message
+ * @param lastParameter Command last parameter
+ */
+function commandPlaylistDisplay(message: Discord.Message, lastParameter: string) {
+  if (lastParameter.length > 0) {
+    MusicPlayer.showSavedPlaylistSongs(message.channel as Discord.TextChannel, lastParameter);
+  }
 }
 
 /**
@@ -374,39 +384,39 @@ function commandHelp(message: Discord.Message) {
         ' * Parametrii obligatorii sunt marcați sub forma ** *<parametru>* **\n' +
         ' * Parametrii opționali sunt marcați sub forma ** *[parametru]* **',
       fields: [{
-        name: `\`1.\` **${env.BOT_PREFIX}play / ${env.BOT_PREFIX}p *[link YouTube]* **`,
+        name: `\`1.\` **${env.BOT_PREFIX}play *[link YouTube]* **`,
         value: 'Redă sunetul din videoclipul introdus sau pornește redarea sunetului dacă acesta a fost oprit',
       }, {
-        name: `\`2.\` **${env.BOT_PREFIX}pause / ${env.BOT_PREFIX}p**`,
+        name: `\`2.\` **${env.BOT_PREFIX}pause**`,
         value: 'Oprește redarea melodiei curente',
       }, {
-        name: `\`3.\` **${env.BOT_PREFIX}skip / ${env.BOT_PREFIX}s**`,
+        name: `\`3.\` **${env.BOT_PREFIX}skip**`,
         value: 'Trece la melodia următoare dacă există',
       }, {
-        name: `\`4.\` **${env.BOT_PREFIX}queue / ${env.BOT_PREFIX}q**`,
+        name: `\`4.\` **${env.BOT_PREFIX}queue**`,
         value: 'Afișează lista de redare',
       }, {
-        name: `\`5.\` **${env.BOT_PREFIX}remove / ${env.BOT_PREFIX}r *<poziție melodie>* **`,
+        name: `\`5.\` **${env.BOT_PREFIX}remove *<poziție melodie>* **`,
         value: 'Șterge melodia din lista de redare',
       }, {
-        name: `\`6.\` **${env.BOT_PREFIX}playlist *[nume playlist]* **`,
-        value: 'Afișează listele de redare salvate sau melodiile aflate într-o listă de redare dacă numele acesteia ' +
-          'este specificat\n' +
+        name: `\`6.\` **${env.BOT_PREFIX}playlist**`,
+        value: 'Afișează listele de redare salvate\n' +
           '-----------------------------------------------------------------------------------------------',
       }, {
         name: `\`6.1.\` **${env.BOT_PREFIX}playlist load *<nume playlist>* **`,
         value: 'Încarcă melodiile salvate în lista de redare specificată și începe redarea',
-        inline: true,
       }, {
         name: `\`6.2.\` **${env.BOT_PREFIX}playlist save *<nume playlist>* **`,
         value: 'Salvează melodiile introduse într-o listă de redare cu numele introdus',
-        inline: true,
       }, {
-        name: `\`6.3.\` **${env.BOT_PREFIX}playlist delete *<nume playlist>* **`,
-        value: 'Șterge lista de redare specificată\n' +
+        name: `\`6.3.\` **${env.BOT_PREFIX}playlist remove *<nume playlist>* **`,
+        value: 'Șterge lista de redare specificată',
+      }, {
+        name: `\`6.4.\` **${env.BOT_PREFIX}playlist display *<nume playlist>* **`,
+        value: 'Afișează melodiile aflate din lista de redare specificată\n' +
           '-----------------------------------------------------------------------------------------------',
       }, {
-        name: `\`0.\` **${env.BOT_PREFIX}about / ${env.BOT_PREFIX}despre**`,
+        name: `\`0.\` **${env.BOT_PREFIX}about**`,
         value: 'Afișează informații despre bot',
       }],
     })
