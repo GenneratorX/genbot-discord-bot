@@ -26,8 +26,8 @@ function init() {
       process.exit(1);
     });
 
-  client.login(env.BOT_TOKEN).catch(err => {
-    console.log(err);
+  client.login(env.BOT_TOKEN).catch(error => {
+    console.log(error);
     process.exit(1);
   });
 }

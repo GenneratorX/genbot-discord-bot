@@ -982,7 +982,7 @@ export class MusicPlayer {
 
     this.killFFmpegEncoder();
 
-    this.playList = [];
+    this.playList.splice(0, this.playList.length);
     this.currentSong = -1;
 
     clearTimeout(this.playlistEndDisconnectTimer);
