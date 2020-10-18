@@ -62,16 +62,21 @@ client.on('voiceStateUpdate', (oldState, newState) => {
   }
 });
 
-function exitCleanup() {
-  process.exit(1);
-}
 
-process.on('exit', () => {
-  db.pool.end();
-  console.log(' -> Disconnected from database!');
+function exitCleanup() {
   client.destroy();
-  console.log(' -> Disconnected from Discord Gateway!');
-});
+  console.log(' -> Disconnected from Discord Gateway');
+
+  db.pool.end()
+    .then(() => {
+      console.log(' -> Disconnected from database');
+      process.exit(0);
+    })
+    .catch(error => {
+      console.log(error);
+      process.exit(1);
+    });
+}
 
 process.on('SIGINT', exitCleanup);
 process.on('SIGUSR1', exitCleanup);
