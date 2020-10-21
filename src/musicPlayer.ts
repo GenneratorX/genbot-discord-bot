@@ -781,7 +781,10 @@ export class MusicPlayer {
   private async createVoiceConnection() {
     if (this.voiceConnection === undefined || this.voiceConnection.status === 4) {
       this.voiceConnection = await this.voiceChannel.join();
-      this.voiceConnection.voice.setSelfDeaf(true);
+
+      if (this.voiceConnection.voice !== null) {
+        this.voiceConnection.voice.setSelfDeaf(true);
+      }
 
       this.voiceConnection.on('disconnect', () => {
         if (this.ready === true) {

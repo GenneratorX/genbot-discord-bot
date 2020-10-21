@@ -89,7 +89,7 @@ export function sendComplexMessage(
 ) {
   let embed = new Discord.MessageEmbed({ color: message.color, title: message.title });
   for (let i = 0; i < message.paragraph.length; i++) {
-    if (embed.description !== undefined) {
+    if (embed.description !== null) {
       if (embed.description.length + message.paragraph[i].length <= maxEmbedDescriptionLength) {
         embed.setDescription(embed.description + message.paragraph[i]);
       } else {
