@@ -977,6 +977,22 @@ export class MusicPlayer {
   }
 
   /**
+   * Current voice server ip address
+   */
+  get currentVoiceServerIp(): { connected: true, ip: string } | { connected: false } {
+    if (this.voiceConnection !== undefined && this.voiceConnection.status !== 4) {
+      return {
+        connected: true,
+        // @ts-ignore
+        ip: this.voiceConnection.authentication.ip,
+      };
+    }
+    return {
+      connected: false,
+    };
+  }
+
+  /**
    * Disposes the player object
    */
   private dispose() {

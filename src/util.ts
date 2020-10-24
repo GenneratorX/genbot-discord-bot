@@ -2,6 +2,9 @@
 
 import Discord = require('discord.js');
 
+import net = require('net');
+import { performance } from 'perf_hooks';
+
 export const colorGreen = 620396;
 export const colorBlue = 3184824;
 export const colorRed = 13840686;
@@ -103,4 +106,37 @@ export function sendComplexMessage(
 
   embed.setFooter(message.footer);
   textChannel.send(embed);
+}
+
+/**
+ * Gets the duration of a TCP 3-way handshake to a hostname
+ * @param hostname Hostname
+ * @param port TCP port
+ * @param connectionTimeout Connection timeout in ms
+ * @returns Duration in ms
+ */
+export function tcpPing(hostname: string, port: number, connectionTimeout?: number): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const socket = new net.Socket();
+    socket.setTimeout(connectionTimeout || 2000);
+    let start: number;
+
+    if (net.isIP(hostname) !== 0) {
+      start = performance.now();
+    }
+
+    socket.once('lookup', () => {
+      start = performance.now();
+    }).once('connect', () => {
+      const end = performance.now();
+      socket.destroy();
+      resolve(end - start);
+    }).once('error', () => {
+      socket.destroy();
+      reject('connectionError');
+    }).once('timeout', () => {
+      socket.destroy();
+      reject('connectionTimeout');
+    }).connect(port, hostname);
+  });
 }

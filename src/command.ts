@@ -332,12 +332,41 @@ function commandPlaylistDisplay(message: Discord.Message, lastParameter: string)
  * @param message Discord message
  */
 function commandLatency(message: Discord.Message) {
-  message.channel.send(
-    new Discord.MessageEmbed({
-      color: util.colorBlue,
-      description: `**Latență (Bot - Server Discord):** ${bot.client.ws.ping}ms`,
-    })
-  );
+  const pings = [util.tcpPing(new URL(bot.client.ws.gateway as string).hostname, 80)];
+  if (musicPlayer !== undefined && musicPlayer.ready === true) {
+    const voiceServerInfo = musicPlayer.currentVoiceServerIp;
+    if (voiceServerInfo.connected === true) {
+      pings.push(util.tcpPing(voiceServerInfo.ip, 80));
+    }
+  }
+
+  const pingEmbed = new Discord.MessageEmbed({
+    color: util.colorBlue,
+    title: 'Ping',
+    fields: [{
+      name: 'Server Discord',
+      value: '-',
+    }, {
+      name: 'Server voce',
+      value: '-',
+    }, {
+      name: 'WS Heartbeat',
+      value: `${bot.client.ws.ping}ms`,
+    }],
+  });
+
+  Promise.allSettled(pings)
+    .then(ping => {
+      if (ping[0].status === 'fulfilled') {
+        pingEmbed.fields[0].value = `${Math.round(ping[0].value)}ms`;
+      }
+
+      if (ping[1] !== undefined && ping[1].status === 'fulfilled') {
+        pingEmbed.fields[1].value = `${Math.round(ping[1].value)}ms`;
+      }
+
+      message.channel.send(pingEmbed);
+    });
 }
 
 /**
