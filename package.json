@@ -17,23 +17,23 @@
   },
   "homepage": "https://github.com/GenneratorX/genbot-discord-bot#readme",
   "dependencies": {
-    "@discordjs/opus": "^0.3.2",
+    "@discordjs/opus": "^0.3.3",
     "bufferutil": "^4.0.1",
     "discord.js": "^12.4.1",
     "erlpack": "github:discordapp/erlpack",
-    "pg": "^8.4.1",
+    "pg": "^8.4.2",
     "sodium": "^3.0.2",
     "utf-8-validate": "^5.0.2",
-    "ytdl-core": "^3.4.2",
+    "ytdl-core": "^4.0.0",
     "zlib-sync": "^0.1.7"
   },
   "devDependencies": {
-    "@types/node": "^14.14.2",
+    "@types/node": "^14.14.5",
     "@types/pg": "^7.14.5",
-    "@types/ws": "^7.2.7",
-    "@typescript-eslint/eslint-plugin": "^4.5.0",
-    "@typescript-eslint/parser": "^4.5.0",
-    "eslint": "^7.12.0",
-    "typescript": "^4.0.3"
+    "@types/ws": "^7.2.8",
+    "@typescript-eslint/eslint-plugin": "^4.6.0",
+    "@typescript-eslint/parser": "^4.6.0",
+    "eslint": "^7.12.1",
+    "typescript": "^4.0.5"
   }
 }
