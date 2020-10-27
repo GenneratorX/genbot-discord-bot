@@ -755,8 +755,14 @@ export class MusicPlayer {
    * @returns Download link and expiration as UNIX timestamp
    */
   private getBestQualityDownloadFormat(videoInfo: ytdl.videoInfo) {
-    const highestQualityAudioFormatURL =
-      ytdl.chooseFormat(videoInfo.formats, { filter: 'audioonly', quality: 'highestaudio' }).url;
+    let highestQualityAudioFormatURL: string;
+
+    if (videoInfo.videoDetails.isLiveContent === false) {
+      highestQualityAudioFormatURL =
+        ytdl.chooseFormat(videoInfo.formats, { filter: 'audioonly', quality: 'highestaudio' }).url;
+    } else {
+      highestQualityAudioFormatURL = ytdl.chooseFormat(videoInfo.formats, { quality: [93, 94, 95, 96, 91, 92] }).url;
+    }
 
     const downloadLinkExpiration = new URL(highestQualityAudioFormatURL).searchParams.get('expire');
 
