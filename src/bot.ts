@@ -6,6 +6,7 @@ import env = require('./env');
 import db = require('./db');
 import command = require('./command');
 
+import { randomPresence } from './util';
 import { musicPlayer } from './command';
 
 export const client = new Discord.Client();
@@ -36,7 +37,8 @@ client.on('ready', () => {
   if (client.user !== null) {
     console.log(' -> Connected to Discord Gateway');
     client.user.setStatus('online');
-    client.user.setActivity('your requests!', { type: 'LISTENING' });
+    randomPresence();
+    client.setInterval(randomPresence, 900000); // 15 minutes
   }
 });
 

@@ -5,6 +5,8 @@ import ytdl = require('ytdl-core');
 
 import childProcess = require('child_process');
 
+import { client } from './bot';
+
 import env = require('./env');
 import util = require('./util');
 import db = require('./db');
@@ -263,6 +265,7 @@ export class MusicPlayer {
       }
     } else {
       this.currentSong = -1;
+      (client.user as Discord.ClientUser).setActivity({ type: 'WATCHING', name: 'time pass by ⏲️' });
       this.playlistEndDisconnectTimer = setTimeout(() => {
         if (this.voiceConnection !== undefined) {
           this.voiceConnection.disconnect();
@@ -838,6 +841,10 @@ export class MusicPlayer {
 
       this.streamDispatcher.on('start', () => {
         console.log(`  [SONG START] ${this.playList[this.currentSong].videoId}`);
+        (client.user as Discord.ClientUser).setActivity({
+          type: 'LISTENING',
+          name: `🎵 ${this.playList[this.currentSong].videoTitle} 🎵`,
+        });
       });
 
       this.streamDispatcher.on('finish', () => {
@@ -855,7 +862,7 @@ export class MusicPlayer {
 
       this.streamDispatcher.on('error', error => {
         console.log(error);
-        this.sendSimpleMessage('Ceva nu a mers bine la redarea videoclipului ... trec la următoarul!', 'error');
+        this.sendSimpleMessage('Ceva nu a mers bine la redarea videoclipului ... trec la următorul!', 'error');
 
         this.killFFmpegEncoder();
 
@@ -1012,6 +1019,8 @@ export class MusicPlayer {
 
     clearTimeout(this.playlistEndDisconnectTimer);
     clearTimeout(this.emptyVoiceChannelDisconnectTimer);
+
+    util.randomPresence();
 
     console.log('[DISPOSE]');
   }

@@ -5,10 +5,22 @@ import Discord = require('discord.js');
 import net = require('net');
 import { performance } from 'perf_hooks';
 
+import { client } from './bot';
+import { musicPlayer } from './command';
+
 export const colorGreen = 620396;
 export const colorBlue = 3184824;
 export const colorRed = 13840686;
 export const maxEmbedDescriptionLength = 2048;
+
+const presenceList: Discord.ActivityOptions[] = [
+  { type: 'LISTENING', name: 'noone' },
+  { type: 'LISTENING', name: 'your requests' },
+  { type: 'PLAYING', name: 'with your feelings' },
+  { type: 'WATCHING', name: 'paint dry' },
+  { type: 'WATCHING', name: 'YOU' }
+];
+let lastPresenceIndex = presenceList.length + 1;
 
 /**
  * Splits a string after the first space
@@ -139,4 +151,19 @@ export function tcpPing(hostname: string, port: number, connectionTimeout?: numb
       reject('connectionTimeout');
     }).connect(port, hostname);
   });
+}
+
+/**
+ * Sets a random bot presence from a predefined list
+ */
+export function randomPresence() {
+  if (musicPlayer === undefined || musicPlayer.ready === false) {
+    let randomPresenceIndex = Math.floor(Math.random() * presenceList.length);
+    while (randomPresenceIndex === lastPresenceIndex) {
+      randomPresenceIndex = Math.floor(Math.random() * presenceList.length);
+    }
+    (client.user as Discord.ClientUser).setActivity(presenceList[randomPresenceIndex]).then(() => {
+      lastPresenceIndex = randomPresenceIndex;
+    });
+  }
 }
