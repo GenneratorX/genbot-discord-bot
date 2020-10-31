@@ -78,7 +78,7 @@ export class MusicPlayer {
   /**
    * FFMpeg encoder process
    */
-  private ffmpegEncoder?: childProcess.ChildProcessWithoutNullStreams;
+  private ffmpegEncoder?: childProcess.ChildProcessByStdio<null, any, null>;
 
   /**
    * Timer that starts after playlist is over
@@ -835,7 +835,10 @@ export class MusicPlayer {
         'pipe:1'
       ];
 
-      this.ffmpegEncoder = childProcess.spawn('ffmpeg', ffmpegParams);
+      this.ffmpegEncoder = childProcess.spawn('ffmpeg', ffmpegParams, {
+        stdio: ['ignore', 'pipe', 'ignore'],
+      });
+
       this.streamDispatcher =
         (this.voiceConnection as Discord.VoiceConnection).play(this.ffmpegEncoder.stdout, env.DISPATCHER_CONFIG);
 
