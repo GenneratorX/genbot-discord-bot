@@ -10,6 +10,7 @@ import { client } from './bot';
 import env = require('./env');
 import util = require('./util');
 import db = require('./db');
+import { EventEmitter } from 'events';
 
 export class MusicPlayer {
   /**
@@ -79,6 +80,10 @@ export class MusicPlayer {
    * FFMpeg encoder process
    */
   private ffmpegEncoder?: childProcess.ChildProcessByStdio<null, any, null>;
+  /**
+   * Batch video loader
+   */
+  private batchVideoLoader?: BatchVideoLoader;
 
   /**
    * Timer that starts after playlist is over
@@ -150,7 +155,7 @@ export class MusicPlayer {
           try {
             const videoInfo = await ytdl.getInfo(youtubeLink);
             if (videoInfo.player_response.playabilityStatus.status === 'OK') {
-              const bestQualityFormat = this.getBestQualityDownloadFormat(videoInfo);
+              const bestQualityFormat = MusicPlayer.getBestQualityDownloadFormat(videoInfo);
               const videoTitle = Discord.Util.escapeMarkdown(videoInfo.videoDetails.title);
               const videoDuration = parseInt(videoInfo.videoDetails.lengthSeconds, 10);
 
@@ -201,6 +206,14 @@ export class MusicPlayer {
                 break;
               case 'Could not find player config':
                 this.sendSimpleMessage('Nu am putut accesa videoclipul ... mai încearcă odată!', 'error');
+                break;
+              case 'Unable to retrieve video metadata':
+                this.sendSimpleMessage('Nu am putut accesa videoclipul ... mai încearcă odată!', 'error');
+                break;
+              case 'Status code: 429':
+                this.sendSimpleMessage(
+                  'YouTube-ul m-a blocat pentru o vreme așa că nu voi putea reda videoclipuri pentru o vreme.', 'error'
+                );
                 break;
               default:
                 console.log(error);
@@ -425,60 +438,58 @@ export class MusicPlayer {
           [playlists[0].playlistId]
         );
 
-        const songInfo: Promise<ytdl.videoInfo>[] = [];
+        const youtubeVideoId: string[] = [];
         for (let i = 0; i < songs.length; i++) {
-          songInfo.push(ytdl.getBasicInfo(songs[i].video_id));
+          youtubeVideoId.push(songs[i].video_id);
         }
 
-        const allSongInfo = await Promise.allSettled(songInfo);
+        const playList: string[] = [];
 
-        const playlist: string[] = [];
-        let playlistDuration = 0;
+        let songCount = 0;
         let failedSongCount = 0;
+        let playlistDuration = 0;
 
-        for (let i = 0; i < allSongInfo.length; i++) {
-          if (allSongInfo[i].status === 'fulfilled') {
-            const song = (allSongInfo[i] as PromiseFulfilledResult<ytdl.videoInfo>).value;
-            const duration = parseInt(song.videoDetails.lengthSeconds, 10);
-            playlistDuration += duration;
-            playlist.push(
-              `\`${i + 1}.\` [${Discord.Util.escapeMarkdown(song.videoDetails.title)}]` +
-              `(https://www.youtube.com/watch?v=${songs[i].video_id}) ` +
-              `**[${util.prettyPrintDuration(duration)}] ` +
-              `[<@${songs[i].added_by}>]**\n`
-            );
-          } else {
-            failedSongCount++;
-            let errorReason: string;
-            switch ((allSongInfo[i] as PromiseRejectedResult).reason.message) {
-              case 'This is a private video. Please sign in to verify that you may see it.':
-                errorReason = '**VIDEOCLIP PRIVAT**';
-                break;
-              case 'Video unavailable':
-                errorReason = '**VIDEOCLIP INDISPONIBIL**';
-                break;
-              case 'Could not find player config':
-                errorReason = '**EROARE LA OBȚINEREA VIDEOCLIPULUI**';
-                break;
-              default:
-                errorReason = '**EROARE GENERICĂ**';
-                console.log((allSongInfo[i] as PromiseRejectedResult).reason.message);
+        new BatchVideoLoader()
+          .on('videoLoaded', videoInfo => {
+            if (videoInfo.error === undefined) {
+              playlistDuration += videoInfo.videoDuration;
+              playList.push(
+                `\`${songCount + 1}.\` [${videoInfo.videoTitle}]` +
+                `(https://www.youtube.com/watch?v=${songs[songCount].video_id}) ` +
+                `**[${util.prettyPrintDuration(videoInfo.videoDuration)}] ` +
+                `[<@${songs[songCount].added_by}>]**\n`
+              );
+            } else {
+              failedSongCount++;
+              let errorReason: string;
+              switch (videoInfo.error) {
+                case 'unplayableVideo': errorReason = '**VIDEOCLIP INDISPONIBIL**'; break;
+                case 'privateVideo': errorReason = '**VIDEOCLIP PRIVAT**'; break;
+                case 'playerConfigNotFound': errorReason = '**EROARE LA OBȚINEREA VIDEOCLIPULUI**'; break;
+                case 'videoMetadataNotFount': errorReason = '**EROARE LA OBȚINEREA VIDEOCLIPULUI**'; break;
+                case 'rateLimit': errorReason = '**EROARE API YOUTUBE (429)**'; break;
+                default: errorReason = '**EROARE GENERICĂ**';
+              }
+              playList.push(
+                `\`${songCount + 1}.\` [${errorReason}](https://www.youtube.com/watch?v=${songs[songCount].video_id})` +
+                ` **[<@${songs[songCount].added_by}>]**\n`
+              );
             }
-            playlist.push(
-              `\`${i + 1}.\` [${errorReason}](https://www.youtube.com/watch?v=${songs[i].video_id}) ` +
-              `**[<@${songs[i].added_by}>]**\n`
-            );
-          }
-        }
-        util.sendComplexMessage({
-          color: util.colorGreen,
-          title: `${Discord.Util.escapeMarkdown(playlists[0].playlistName)}`,
-          footer:
-            `Număr melodii: ${songs.length} ` +
-            `${failedSongCount !== 0 ? `(${songs.length - failedSongCount} valabile)` : ''} ` +
-            `| Durată: ${util.prettyPrintDuration(playlistDuration)}`,
-          paragraph: playlist,
-        }, textChannel);
+            songCount++;
+          })
+          .on('videoBatchLoaded', () => {
+            util.sendComplexMessage({
+              color: util.colorGreen,
+              title: `${Discord.Util.escapeMarkdown(playlists[0].playlistName)}`,
+              footer:
+                `Număr melodii: ${songs.length} ` +
+                `${failedSongCount !== 0 ? `(${songs.length - failedSongCount} valabile)` : ''} ` +
+                `| Durată: ${util.prettyPrintDuration(playlistDuration)}`,
+              paragraph: playList,
+            }, textChannel);
+          })
+          .loadPlaylist(youtubeVideoId, true);
+
       } else {
         let matches = '';
         for (let i = 0; i < playlists.length; i++) {
@@ -618,88 +629,91 @@ export class MusicPlayer {
             [playlists[0].playlistId]
           );
 
-          const songInfo: Promise<ytdl.videoInfo>[] = [];
+          const youtubeVideoId: string[] = [];
           for (let i = 0; i < songs.length; i++) {
-            songInfo.push(ytdl.getInfo(songs[i].video_id));
+            youtubeVideoId.push(songs[i].video_id);
           }
+          this.loadingQueue = youtubeVideoId;
 
-          const allSongInfo = await Promise.allSettled(songInfo);
-
-          const playList: {
-            videoId: string,
-            videoDownloadLink: string,
-            videoDownloadLinkExpiration: number,
-            videoTitle: string,
-            videoDuration: number,
-            addedBy: string
-          }[] = [];
+          let songCount = 0;
           const failedSong: string[] = [];
+          let firstSongLoaded = false;
 
-          for (let i = 0; i < allSongInfo.length; i++) {
-            if (allSongInfo[i].status === 'fulfilled') {
-              const song = (allSongInfo[i] as PromiseFulfilledResult<ytdl.videoInfo>).value;
-              const bestQualityFormat = this.getBestQualityDownloadFormat(song);
-              playList.push({
-                videoId: song.videoDetails.videoId,
-                videoDownloadLink: bestQualityFormat.videoDownloadLink,
-                videoDownloadLinkExpiration: bestQualityFormat.videoDownloadLinkExpiration,
-                videoTitle: Discord.Util.escapeMarkdown(song.videoDetails.title),
-                videoDuration: parseInt(song.videoDetails.lengthSeconds, 10),
-                addedBy: songs[i].added_by,
-              });
-            } else {
-              let errorReason: string;
-              switch ((allSongInfo[i] as PromiseRejectedResult).reason.message) {
-                case 'This is a private video. Please sign in to verify that you may see it.':
-                  errorReason = '**VID. PRIVAT**';
-                  break;
-                case 'Video unavailable':
-                  errorReason = '**VID. INDISPONIBIL**';
-                  break;
-                case 'Could not find player config':
-                  errorReason = '**EROARE PRELUARE**';
-                  break;
-                default:
-                  errorReason = '**EROARE GENERICĂ**';
-                  console.log((allSongInfo[i] as PromiseRejectedResult).reason.message);
-              }
-              failedSong.push(`\`${i + 1}.\` https://www.youtube.com/watch?v=${songs[i].video_id} [${errorReason}]\n`);
-            }
-          }
+          this.batchVideoLoader = new BatchVideoLoader();
+          this.batchVideoLoader
+            .on('videoLoaded', videoInfo => {
+              if (videoInfo.error === undefined) {
+                if (firstSongLoaded === false) {
+                  firstSongLoaded = true;
+                  this.playList.splice(0, this.playList.length);
+                  this.playList.push({
+                    ...videoInfo,
+                    videoId: songs[songCount].video_id,
+                    addedBy: songs[songCount].added_by,
+                  });
 
-          if (failedSong.length !== allSongInfo.length) {
-            if (failedSong.length === 0) {
-              this.sendSimpleMessage('Lista de redare a fost încărcată în totalitate!', 'success');
-            } else {
-              if (failedSong.length === 1) {
-                failedSong.unshift(
-                  'Am încărcat toată lista de redare cu excepția unei melodii. ' +
-                  `**Melodia care nu este inclusă în lista de redare este:**\n`
-                );
+
+                  if (this.ready === true) {
+                    this.currentSong = -1;
+                    (this.streamDispatcher as Discord.StreamDispatcher).end();
+                  } else {
+                    this.ready = true;
+                    this.playSong(0).then(() => {
+                      this.checkOnCurrentVoiceChannelUsers();
+                    });
+                  }
+                } else {
+                  this.playList.push({
+                    ...videoInfo,
+                    videoId: songs[songCount].video_id,
+                    addedBy: songs[songCount].added_by,
+                  });
+                }
               } else {
-                failedSong.unshift(
-                  `Am încărcat o parte din lista de redare. **${failedSong.length} melodii** nu au putut fi ` +
-                  `încărcate. \n**Melodiile care nu au fost incluse în lista de redare sunt:**\n`
+                let errorReason: string;
+                switch (videoInfo.error) {
+                  case 'unplayableVideo': errorReason = '**VIDEOCLIP INDISPONIBIL**'; break;
+                  case 'privateVideo': errorReason = '**VIDEOCLIP PRIVAT**'; break;
+                  case 'playerConfigNotFound': errorReason = '**EROARE LA OBȚINEREA VIDEOCLIPULUI**'; break;
+                  case 'videoMetadataNotFount': errorReason = '**EROARE LA OBȚINEREA VIDEOCLIPULUI**'; break;
+                  case 'rateLimit': errorReason = '**EROARE API YOUTUBE (429)**'; break;
+                  default: errorReason = '**EROARE GENERICĂ**';
+                }
+                failedSong.push(
+                  `\`${songCount + 1}.\` https://www.youtube.com/watch?v=${songs[songCount].video_id} ` +
+                  `[${errorReason}]\n`
                 );
               }
-              util.sendComplexMessage({
-                color: util.colorBlue,
-                title: '',
-                footer: '',
-                paragraph: failedSong,
-              }, this.textChannel);
-            }
-            this.playList = playList;
-            if (this.ready === true) {
-              this.currentSong = -1;
-              (this.streamDispatcher as Discord.StreamDispatcher).end();
-            } else {
-              this.ready = true;
-              this.playSong(0);
-            }
-          } else {
-            this.sendSimpleMessage('Nu am putut să încarc nicio melodie din lista de redare!', 'error');
-          }
+              songCount++;
+            })
+            .on('videoBatchLoaded', () => {
+              if (failedSong.length !== youtubeVideoId.length) {
+                if (failedSong.length === 0) {
+                  this.sendSimpleMessage('Lista de redare a fost încărcată în totalitate!', 'success');
+                } else {
+                  if (failedSong.length === 1) {
+                    failedSong.unshift(
+                      'Am încărcat toată lista de redare cu excepția unei melodii. ' +
+                      `**Melodia care nu este inclusă în lista de redare este:**\n`
+                    );
+                  } else {
+                    failedSong.unshift(
+                      `Am încărcat o parte din lista de redare. **${failedSong.length} melodii** nu au putut fi ` +
+                      `încărcate. \n**Melodiile care nu au fost incluse în lista de redare sunt:**\n`
+                    );
+                  }
+                  util.sendComplexMessage({
+                    color: util.colorBlue,
+                    title: '',
+                    footer: '',
+                    paragraph: failedSong,
+                  }, this.textChannel);
+                }
+              } else {
+                this.sendSimpleMessage('Nu am putut să încarc nicio melodie din lista de redare!', 'error');
+              }
+            })
+            .loadPlaylist(youtubeVideoId);
         } else {
           let matches = '';
           for (let i = 0; i < playlists.length; i++) {
@@ -757,7 +771,7 @@ export class MusicPlayer {
    * @param videoInfo YTDL Video info object
    * @returns Download link and expiration as UNIX timestamp
    */
-  private getBestQualityDownloadFormat(videoInfo: ytdl.videoInfo) {
+  static getBestQualityDownloadFormat(videoInfo: ytdl.videoInfo) {
     let highestQualityAudioFormatURL: string;
 
     if (videoInfo.videoDetails.isLiveContent === false) {
@@ -901,7 +915,7 @@ export class MusicPlayer {
       try {
         const videoInfo = await ytdl.getInfo(this.playList[this.currentSong].videoId);
         if (videoInfo.player_response.playabilityStatus.status === 'OK') {
-          const bestQualityFormat = this.getBestQualityDownloadFormat(videoInfo);
+          const bestQualityFormat = MusicPlayer.getBestQualityDownloadFormat(videoInfo);
           this.playList[this.currentSong].videoDownloadLink = bestQualityFormat.videoDownloadLink;
           this.playList[this.currentSong].videoDownloadLinkExpiration = bestQualityFormat.videoDownloadLinkExpiration;
           return { isValid: true };
@@ -976,6 +990,15 @@ export class MusicPlayer {
   }
 
   /**
+   * Disposes the batch video loader
+   */
+  private disposeBatchVideoLoader() {
+    if (this.batchVideoLoader !== undefined) {
+      this.batchVideoLoader.dispose();
+    }
+  }
+
+  /**
    * Whether the player is paused
    */
   get paused() {
@@ -1016,6 +1039,7 @@ export class MusicPlayer {
     this.voiceChannel.leave();
 
     this.killFFmpegEncoder();
+    this.disposeBatchVideoLoader();
 
     this.playList.splice(0, this.playList.length);
     this.currentSong = -1;
@@ -1026,5 +1050,109 @@ export class MusicPlayer {
     util.randomPresence();
 
     console.log('[DISPOSE]');
+  }
+}
+
+class BatchVideoLoader extends EventEmitter {
+
+  /**
+   * Video list to load
+   */
+  private youtubeVideoIdList: string[];
+
+  private disposed: boolean;
+
+  constructor() {
+    super();
+    this.youtubeVideoIdList = [];
+    this.disposed = false;
+  }
+
+  async loadPlaylist(youtubeVideoId: string[], basicInfo = false, batchSize = 3) {
+    this.youtubeVideoIdList = youtubeVideoId;
+
+    let getVideoInfo;
+
+    if (basicInfo === false) {
+      getVideoInfo = ytdl.getInfo;
+    } else {
+      getVideoInfo = ytdl.getBasicInfo;
+    }
+
+    for (let i = 0; i < this.youtubeVideoIdList.length; i += batchSize) {
+      const videoBatchPromise: Promise<ytdl.videoInfo>[] = [];
+      for (let j = i; (j < i + batchSize) && (j < this.youtubeVideoIdList.length); j++) {
+        videoBatchPromise.push(getVideoInfo(this.youtubeVideoIdList[j]));
+      }
+
+      const videoBatch = await Promise.allSettled(videoBatchPromise);
+
+      for (let j = 0; j < videoBatch.length; j++) {
+        const parsedVideo = BatchVideoLoader.parseVideoInfo(videoBatch[j], basicInfo);
+        this.emit('videoLoaded', parsedVideo);
+      }
+    }
+
+    this.emit('videoBatchLoaded');
+    this.dispose();
+  }
+
+  /**
+   * Parses a settled promise of a ytdl video object
+   * @param videoInfoPromise Video info object
+   * @returns Pretty video info
+   */
+  private static parseVideoInfo(videoInfoPromise: PromiseSettledResult<ytdl.videoInfo>, basicInfo = false) {
+    if (videoInfoPromise.status === 'fulfilled') {
+      const videoInfo = (videoInfoPromise as PromiseFulfilledResult<ytdl.videoInfo>).value;
+      if (videoInfo.player_response.playabilityStatus.status === 'OK') {
+        if (basicInfo === false) {
+          const bestQualityFormat = MusicPlayer.getBestQualityDownloadFormat(videoInfo);
+          return {
+            videoDownloadLink: bestQualityFormat.videoDownloadLink,
+            videoDownloadLinkExpiration: bestQualityFormat.videoDownloadLinkExpiration,
+            videoTitle: Discord.Util.escapeMarkdown(videoInfo.videoDetails.title),
+            videoDuration: parseInt(videoInfo.videoDetails.lengthSeconds, 10),
+          };
+        }
+        return {
+          videoTitle: Discord.Util.escapeMarkdown(videoInfo.videoDetails.title),
+          videoDuration: parseInt(videoInfo.videoDetails.lengthSeconds, 10),
+        };
+      }
+      return { error: 'unplayableVideo' };
+    } else {
+      let errorReason: string;
+      switch ((videoInfoPromise as PromiseRejectedResult).reason.message) {
+        case 'This is a private video. Please sign in to verify that you may see it.':
+          errorReason = 'privateVideo';
+          break;
+        case 'Video unavailable':
+          errorReason = 'unavailableVideo';
+          break;
+        case 'Could not find player config':
+          errorReason = 'playerConfigNotFound';
+          break;
+        case 'Unable to retrieve video metadata':
+          errorReason = 'videoMetadataNotFound';
+          break;
+        case 'Status code: 429':
+          errorReason = 'rateLimit';
+          break;
+        default:
+          errorReason = 'otherError';
+          console.log((videoInfoPromise as PromiseRejectedResult).reason.message);
+      }
+      return { error: errorReason };
+    }
+  }
+
+  dispose() {
+    if (this.disposed === false) {
+      this.removeAllListeners('videoLoaded');
+      this.removeAllListeners('videoBatchLoaded');
+      this.youtubeVideoIdList.splice(0, this.youtubeVideoIdList.length);
+      this.disposed = true;
+    }
   }
 }
