@@ -1072,7 +1072,7 @@ class BatchVideoLoader extends EventEmitter {
   /**
    * Loads multiple YouTube videos in batches
    * @param youtubeVideoId YouTube video IDs
-   * @param basicInfo Whether to load only basic info about songs
+   * @param basicInfo Whether to load only basic info about videos
    * @param batchSize Maximum video load batch size
    */
   async loadPlaylist(youtubeVideoId: string[], basicInfo = false, batchSize = 3) {
