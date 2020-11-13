@@ -1054,12 +1054,13 @@ export class MusicPlayer {
 }
 
 class BatchVideoLoader extends EventEmitter {
-
   /**
    * Video list to load
    */
   private youtubeVideoIdList: string[];
-
+  /**
+   * Whether the batch video loader was disposed
+   */
   private disposed: boolean;
 
   constructor() {
@@ -1068,6 +1069,12 @@ class BatchVideoLoader extends EventEmitter {
     this.disposed = false;
   }
 
+  /**
+   * Loads multiple YouTube videos in batches
+   * @param youtubeVideoId YouTube video IDs
+   * @param basicInfo Whether to load only basic info about songs
+   * @param batchSize Maximum video load batch size
+   */
   async loadPlaylist(youtubeVideoId: string[], basicInfo = false, batchSize = 3) {
     this.youtubeVideoIdList = youtubeVideoId;
 
@@ -1147,6 +1154,9 @@ class BatchVideoLoader extends EventEmitter {
     }
   }
 
+  /**
+   * Disposes the batch video loader object
+   */
   dispose() {
     if (this.disposed === false) {
       this.removeAllListeners('videoLoaded');
