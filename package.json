@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/GenneratorX/genbot-discord-bot#readme",
   "dependencies": {
-    "@discordjs/opus": "^0.3.3",
+    "@discordjs/opus": "^0.5.2",
     "bufferutil": "^4.0.3",
     "discord.js": "^12.5.1",
     "erlpack": "github:discordapp/erlpack",
